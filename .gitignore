@@ -74,3 +74,11 @@ typings/
 
 # FuseBox cache
 .fusebox/
+
+# Supeer
+.vscode/
+dist/
+examples/autorun/
+examples/**/bin/
+examples/**/obj/
+**/js/
