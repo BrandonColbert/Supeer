@@ -1,6 +1,3 @@
-/** Passes a message */
-type Send = (msg: string) => void
-
 /**
  * Used to write a string in smaller chunks which are composed on the receiving end
  */
@@ -10,7 +7,7 @@ export class Buffered {
 	 * @param senders Method used to send a single message
 	 * @param chunkSize Amount of bytes to separate each chunk into
 	 */
-	public static write(msg: string, senders: Send | Send[], chunkSize: number = 64 * 4 * 4): void {
+	public static write(msg: string, senders: Buffered.Send | Buffered.Send[], chunkSize: number = 64 * 4 * 4): void {
 		//Ensure senders is an array
 		if(!Array.isArray(senders))
 			senders = [senders]
@@ -28,7 +25,7 @@ export class Buffered {
 				data: [...buffer.slice(start, end ?? (start + chunkSize))]
 			})
 
-			for(let fn of senders as Send[])
+			for(let fn of senders as Buffered.Send[])
 				fn(data)
 		}
 
@@ -45,43 +42,61 @@ export class Buffered {
 }
 
 export namespace Buffered {
+	/** Passes a message chunk */
+	export type Send = (chunk: string) => void
+
+	/** Passes a fully constructed message */
+	export type Listener = (message: string) => void
+
 	/**
 	 * Creates a reader for incoming buffered writes
 	 */
 	export class Reader {
-		private buffer: Buffer
-		private sender: Send
+		private listener: Listener
+		private chunkAccumulator: string
+		private messageBuffer: Buffer
 
 		/**
 		 * @param sender Each composed message is passed to this callback
 		 */
-		public constructor(sender: Send) {
-			this.sender = sender
+		public constructor(listener: Listener) {
+			this.listener = listener
+			this.chunkAccumulator = ""
 		}
 
 		/**
-		 * Reads a single chunk of a message
-		 * @param chunk Message chunk
+		 * Reads single or multiple, partial or complete chunks of a message
+		 * @param chunks Message chunk
 		 */
-		public read(chunk: string): void {
-			//Convert to info describing the chunk
-			let info: {size: number, offset: number, data: number[]} = JSON.parse(chunk)
+		public read(chunks: string | Buffer): void {
+			this.chunkAccumulator += chunks.toString()
 
-			//If the offset is zero, a new message is being sent
-			if(info.offset == 0)
-				this.buffer = Buffer.alloc(info.size)
+			for(let chunk of [...this.chunkAccumulator.matchAll(/{.*?}/g)].map(group => group[0])) {
+				//Consume the chunk from the accumulator
+				this.chunkAccumulator = this.chunkAccumulator.substring(chunk.length)
 
-			//Create a buffer for the chunk and copy it into the composite message buffer
-			let db = Buffer.from(info.data)
-			db.copy(this.buffer, info.offset)
+				//Convert to info describing the chunk
+				let info: {size: number, offset: number, data: number[]} = JSON.parse(chunk)
 
-			//Check if the chunk completed the message
-			if(info.offset + db.length != info.size)
-				return
+				//If the offset is zero, a new message is being sent
+				if(info.offset == 0)
+					this.messageBuffer = Buffer.alloc(info.size)
 
-			//Send the composed message and release the buffer
-			this.sender(this.buffer.toString())
-			this.buffer = null
+				//Create a buffer for the chunk and copy it into the composite message buffer
+				let db = Buffer.from(info.data)
+				db.copy(this.messageBuffer, info.offset)
+
+				//Check if the chunk completed the message
+				if(info.offset + db.length != info.size)
+					return
+
+				//Send the composed message and release the buffer
+				this.listener(this.messageBuffer.toString())
+				this.messageBuffer = null
+			}
+
+			if(this.chunkAccumulator.length > 0 && this.chunkAccumulator[0] != "{")
+				throw new Error(`Invalid chunkstate '${this.chunkAccumulator[0]}'`)
 		}
 	}
 }

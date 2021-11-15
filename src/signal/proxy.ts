@@ -18,18 +18,14 @@ export class Proxy {
 	 * @returns The external IPv4 address of this device
 	 */
 	public static getExternalAddress(): Promise<string> {
-		let options = {
-			host: "ipv4bot.whatismyipaddress.com",
-			port: 80,
-			path: "/"
-		}
-
 		return new Promise((resolve, reject) => {
-			let request = http.get(options, res => {
-				res.on("data", chunk => resolve(chunk))
-			})
-			
-			request.on("error", err => reject(err.message))
+			let config = Supeer.Config.get("settings")
+			let ipv4 = config?.proxy?.ipv4
+
+			if(ipv4)
+				resolve(ipv4)
+			else
+				reject(ipv4)
 		})
 	}
 }

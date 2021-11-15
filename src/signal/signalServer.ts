@@ -1,6 +1,6 @@
 import net from "net"
-import readline from "readline"
 import Supeer from "../supeer.js"
+import Buffered from "../utils/buffered.js"
 import Discardable from "../utils/discardable.js"
 import Eventual from "../utils/eventual.js"
 import promisify from "../utils/promisify.js"
@@ -18,7 +18,7 @@ export class SignalServer implements Eventual {
 		this.server.on("close", () => this.discard())
 		this.server.on("connection", socket => new SignalServer.Connection(this, socket))
 
-		this.listenPromise = promisify<[number, string, () => void]>(this.server, this.server.listen, port, "localhost").then(() => {
+		this.listenPromise = promisify<[number, string, () => void]>(this.server, this.server.listen, port, "").then(() => {
 			Supeer.console(this).log("Started!")
 		})
 	}
@@ -60,17 +60,32 @@ export namespace SignalServer {
 	export class Connection implements Discardable {
 		public readonly socket: net.Socket
 		private server: SignalServer
-		private reader: readline.Interface
 
 		public constructor(server: SignalServer, socket: net.Socket) {
 			this.server = server
 
-			this.socket = socket
-			this.socket.on("close", this.onClose)
-			this.socket.on("error", this.onError)
+			let reader = new Buffered.Reader(input => {
+				try {
+					JSON.parse(input)
+				} catch(err) {
+					Supeer.console(this.server).error(`Received invalid JSON from ${this}\n${input}`)
+					this.discard()
+	
+					return
+				}
+	
+				let connections = this.server["connections"]
+				Buffered.write(input, [...connections.values()].map(c => chunk => c.socket.write(chunk)))
+			})
 
-			this.reader = readline.createInterface(socket)
-			this.reader.on("line", this.onLine)
+			this.socket = socket
+			this.socket.on("data", data => reader.read(data))
+			this.socket.on("end", () => this.discard())
+			this.socket.on("close", (hadError: boolean) => this.discard())
+			this.socket.on("error", (error: Error) => {
+				Supeer.console(this.server).error(error.message)
+				this.discard()
+			})
 
 			let connections: Set<Connection> = server["connections"]
 			connections.add(this)
@@ -82,7 +97,6 @@ export namespace SignalServer {
 			let connections = this.server["connections"]
 
 			if(connections.delete(this)) {
-				this.reader.close()
 				this.socket.destroy()
 
 				Supeer.console(this.server).log(`Disconnected ${this}`)
@@ -94,31 +108,6 @@ export namespace SignalServer {
 			let port = this.socket.remotePort
 
 			return address && port ? `${address}:${port}` : "'unknown'"
-		}
-
-		private onLine = (input: string) => {
-			try {
-				JSON.parse(input)
-			} catch(err) {
-				console.error(err)
-				Supeer.console(this.server).error(`Received invalid JSON from ${this}\n${input}`)
-
-				this.discard()
-				return
-			}
-
-			let connections = this.server["connections"]
-
-			for(let c of connections.values())
-				c.socket.write(`${input}\n`)
-		}
-
-		private onClose = (hadError: boolean): void => {
-			this.discard()
-		}
-
-		private onError = (error: Error): void => {
-			this.discard()
 		}
 	}
 }

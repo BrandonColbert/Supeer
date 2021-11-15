@@ -120,7 +120,11 @@ export namespace Supeer {
 		 * @param key Config filename
 		 * @returns Content of the JSON file as an object
 		 */
-		public static get<T = any>(key: string): T {
+		public static get<T extends {} = any>(key: string): T
+		public static get(key: "settings"): Config.Settings
+		public static get(key: "rtc"): RTCConfiguration
+
+		public static get(key: string): any {
 			return this.info.get(key)
 		}
 
@@ -130,6 +134,22 @@ export namespace Supeer {
 		 */
 		public static has(key: string): boolean {
 			return this.info.has(key)
+		}
+	}
+
+	export namespace Config {
+		export interface Settings {
+			/**
+			 * Proxy configuration
+			 */
+			proxy: {
+				ipv4: string
+			}
+
+			/**
+			 * List of commands to run after starting
+			 */
+			autorun: string[]
 		}
 	}
 }

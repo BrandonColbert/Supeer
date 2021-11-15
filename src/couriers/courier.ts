@@ -5,7 +5,7 @@ type Callback = (id: Id, data: any) => boolean
 type Id = string
 
 /**
- * Creates connections by sending and recieving broadcasted data through some medium
+ * Creates connections by sending and receiving broadcasted data through some medium
  * 
  * Every courier has its own unique id when broadcasting
  */

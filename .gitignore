@@ -77,6 +77,7 @@ typings/
 
 # Supeer
 .vscode/
+config/
 dist/
 examples/autorun/
 examples/**/bin/

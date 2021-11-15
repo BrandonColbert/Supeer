@@ -1,5 +1,6 @@
 import net from "net"
-import readline from "readline"
+import Supeer from "../supeer.js"
+import Buffered from "../utils/buffered.js"
 import Courier from "./courier.js"
 
 /**
@@ -17,11 +18,15 @@ export default class SignalCourier extends Courier {
 		this.port = port
 		this.socket = new net.Socket()
 
-		let reader = readline.createInterface(this.socket)
-		reader.on("line", line => this.recieve(line))
+		let reader = new Buffered.Reader(msg => this.recieve(msg))
 
-		this.socket.on("close", () => reader.close())
-		this.socket.on("error", e => console.error(e.message))
+		this.socket.on("data", data => reader.read(data))
+		this.socket.on("end", () => this.discard())
+		this.socket.on("close", (hadError: boolean) => this.discard())
+		this.socket.on("error", (error: Error) => {
+			Supeer.console(this).error(error.message)
+			this.discard()
+		})
 
 		this.connectPromise = new Promise<void>(r => this.socket.connect(port, hostname, () => r()))
 	}
@@ -32,7 +37,7 @@ export default class SignalCourier extends Courier {
 	}
 
 	public override discard(): void {
-		this.socket.destroy()
+		this.socket?.destroy()
 		this.socket = null
 	}
 
@@ -44,6 +49,6 @@ export default class SignalCourier extends Courier {
 	}
 
 	protected send(msg: string): void {
-		this.socket.write(`${msg}\n`)
+		Buffered.write(msg, chunk => this.socket.write(chunk))
 	}
 }

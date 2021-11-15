@@ -57,7 +57,7 @@ export default class Host extends Peer implements Discardable {
 	public async connect(sdp: string, onCandidateOut: Peer.CandidatePass): Promise<Host.ConnectResult> {
 		let id: string = uuid()
 
-		let connection: RTCPeerConnection = new wrtc.RTCPeerConnection(Supeer.Config.get<RTCConfiguration>("rtc"))
+		let connection: RTCPeerConnection = new wrtc.RTCPeerConnection(Supeer.Config.get("rtc"))
 		connection.onicecandidate = e => onCandidateOut(e.candidate ?? {})
 
 		connection.onconnectionstatechange = e => {

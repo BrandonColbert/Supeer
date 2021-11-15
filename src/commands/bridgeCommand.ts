@@ -2,7 +2,6 @@ import Bridge from "../signal/bridge.js"
 import Courier from "../couriers/courier.js"
 import Command from "./core/command.js"
 import ObjectParameter from "./core/objectParameter.js"
-import Supeer from "../supeer.js"
 
 export default class BridgeCommand extends Command {
 	public readonly name: string = "bridge"

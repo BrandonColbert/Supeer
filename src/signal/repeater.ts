@@ -1,11 +1,11 @@
 import net from "net"
-import readline from "readline"
 import Peer from "../peers/peer.js"
 import Guest from "../peers/guest.js"
 import Host from "../peers/host.js"
 import Eventual from "../utils/eventual.js"
 import Supeer from "../supeer.js"
 import promisify from "../utils/promisify.js"
+import Buffered from "../utils/buffered.js"
 
 /**
  * Allows an external application to use P2P communication through a local TCP server
@@ -29,9 +29,12 @@ export default class Repeater implements Eventual {
 
 		this.server.on("close", () => this.discard())
 		this.server.on("connection", socket => {
-			let reader = readline.createInterface(socket)
+			let discard = () => {
+				if(this.sockets.delete(socket))
+					socket.destroy()
+			}
 
-			reader.on("line", line => {
+			let reader = new Buffered.Reader(line => {
 				try {
 					let info = JSON.parse(line)
 					this.send(info)
@@ -43,9 +46,13 @@ export default class Repeater implements Eventual {
 				}
 			})
 
-			socket.on("close", () => {
-				reader.close()
-				this.sockets.delete(socket)
+			socket.on("data", data => reader.read(data))
+			socket.on("close", () => discard())
+			socket.on("end", () => discard())
+			socket.on("close", (hadError: boolean) => discard())
+			socket.on("error", (error: Error) => {
+				Supeer.console(this).error(error.message)
+				discard()
 			})
 
 			this.sockets.add(socket)

@@ -42,6 +42,16 @@ Supeer.Config.populate().then(async () => {
 		console.log()
 	}
 
+	for(let command of Supeer.Config.get("settings")?.autorun) {
+		try {
+			console.log(command)
+			await commander.execute(command.split(/\s+/g))
+		} catch(err) {
+			console.error(err)
+			break
+		}
+	}
+
 	//Poll for commands
 	terminal.on("line", line => {
 		if(!line)

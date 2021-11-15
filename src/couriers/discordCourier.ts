@@ -22,7 +22,30 @@ export default class DiscordCourier extends Courier {
 			Discord.Intents.FLAGS.GUILD_MESSAGES
 		]})
 
+		this.client.on("messageCreate", msg => {
+			if(msg.author.id != this.client.user.id)
+				return
+
+			this.recieve(msg.content)
+		})
+
 		this.loggedIn = new Promise<void>(async (resolve, reject) => {
+			try {
+				await this.client.login(token)
+			} catch(e) {
+				switch(typeof e) {
+					case "string":
+						reject(e)
+						break
+					default:
+						if(e instanceof Error)
+							reject(e.message)
+						else
+							reject("Discord courier failed to login")
+						break
+				}
+			}
+
 			await promisify(this.client, this.client.once, "ready")
 
 			let channel = await this.client.channels.fetch(channelId)
@@ -40,15 +63,6 @@ export default class DiscordCourier extends Courier {
 			this.channel = channel
 			resolve()
 		})
-
-		this.client.on("messageCreate", msg => {
-			if(msg.author.id != this.client.user.id)
-				return
-
-			this.recieve(msg.content)
-		})
-
-		this.client.login(token)
 	}
 
 	public override async ready(): Promise<void> {

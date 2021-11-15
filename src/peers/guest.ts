@@ -24,7 +24,7 @@ export class Guest extends Peer implements Discardable {
 		super()
 
 		//Prepare for recieving
-		this.connection = new wrtc.RTCPeerConnection(Supeer.Config.get<RTCConfiguration>("rtc"))
+		this.connection = new wrtc.RTCPeerConnection(Supeer.Config.get("rtc"))
 		this.connection.ondatachannel = a => {
 			let reader = new Buffered.Reader(msg => this.events.fire("recieve", {message: msg}))
 			a.channel.onmessage = b => reader.read(b.data)
