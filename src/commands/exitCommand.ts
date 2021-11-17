@@ -1,3 +1,4 @@
+import Supeer from "../supeer.js"
 import Command from "./core/command.js"
 
 export default class ExitCommand extends Command {
@@ -7,7 +8,7 @@ export default class ExitCommand extends Command {
 		return "Closes the program."
 	}
 
-	public execute(args: string[], options: Record<string, any>): Promise<void> {
+	public async execute(): Promise<void> {
 		process.exit()
 	}
 }

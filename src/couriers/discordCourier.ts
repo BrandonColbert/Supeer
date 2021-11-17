@@ -1,5 +1,5 @@
 import Discord from "discord.js"
-import promisify from "../utils/promisify.js"
+import Supeer from "../supeer.js"
 import Courier from "./courier.js"
 
 /**
@@ -30,6 +30,23 @@ export default class DiscordCourier extends Courier {
 		})
 
 		this.loggedIn = new Promise<void>(async (resolve, reject) => {
+			this.client.once("ready", async client => {
+				let channel = await client.channels.fetch(channelId)
+	
+				if(!channel) {
+					reject(`Unable to connect to channel '${channelId}'`)
+					return
+				}
+	
+				if(!(channel instanceof Discord.TextChannel)) {
+					reject(`Expected text channel, but '${channelId}' is a ${channel.type} channel`)
+					return
+				}
+	
+				this.channel = channel
+				resolve()
+			})
+
 			try {
 				await this.client.login(token)
 			} catch(e) {
@@ -45,23 +62,6 @@ export default class DiscordCourier extends Courier {
 						break
 				}
 			}
-
-			await promisify(this.client, this.client.once, "ready")
-
-			let channel = await this.client.channels.fetch(channelId)
-
-			if(!channel) {
-				reject(`Unable to connect to channel '${channelId}'`)
-				return
-			}
-
-			if(!(channel instanceof Discord.TextChannel)) {
-				reject(`Expected text channel, but '${channelId}' is a ${channel.type} channel`)
-				return
-			}
-
-			this.channel = channel
-			resolve()
 		})
 	}
 
@@ -71,7 +71,11 @@ export default class DiscordCourier extends Courier {
 	}
 
 	public override discard(): void {
-		this.client.destroy()
+		Supeer.console(this).log("Logging out...")
+
+		this.client?.destroy()
+		this.client = null
+		this.channel = null
 	}
 
 	public override toString(): string {

@@ -19,7 +19,10 @@ export default abstract class Courier implements Eventual {
 	}
 
 	public async ready(): Promise<void> {}
-	public discard(): void {}
+
+	public discard(): void {
+		this.callbacks.clear()
+	}
 
 	/**
 	 * Broadcast data to all listeners

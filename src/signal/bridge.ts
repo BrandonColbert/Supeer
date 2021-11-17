@@ -14,6 +14,7 @@ export default class Bridge implements Eventual {
 	private static localhostUrls: Set<string> = new Set(["localhost", "127.0.0.1", ""])
 	private server: http.Server
 	private connectionReady: Promise<void>
+	private courier: Courier
 
 	/**
 	 * @param courier Courier to provide access to
@@ -21,6 +22,7 @@ export default class Bridge implements Eventual {
 	 */
 	public constructor(courier: Courier, port: number) {
 		this.server = http.createServer()
+		this.courier = courier
 
 		//Create the server that the browser will connect to
 		let wsServer = new WebSocketServer({httpServer: this.server})
@@ -102,10 +104,10 @@ export default class Bridge implements Eventual {
 
 		switch(typeof address) {
 			case "string":
-				return `Bridge[addr=${address}]`
+				return `Bridge[addr=${address}, courier=${this.courier}]`
 			default:
 				let {port} = address
-				return `Bridge[port=${port}]`
+				return `Bridge[port=${port}, courier=${this.courier}]`
 		}
 	}
 }

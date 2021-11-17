@@ -2,9 +2,9 @@ export abstract class Parameter {
 	public readonly description: string
 	public readonly optional: boolean
 
-	public constructor({description = "", optional = false}: Parameter.Descriptor) {
-		this.description = description
-		this.optional = optional
+	public constructor(descriptor: Parameter.Descriptor) {
+		this.description = descriptor.description ?? ""
+		this.optional = descriptor.optional ?? false
 	}
 
 	public abstract take(arg: string): any

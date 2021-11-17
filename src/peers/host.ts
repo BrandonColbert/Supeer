@@ -112,6 +112,10 @@ export default class Host extends Peer implements Discardable {
 			for(let id of this.lines.keys())
 				this.disconnect(id)
 	}
+
+	public override toString(): string {
+		return `Host[n=${this.lines.size}]`
+	}
 }
 
 export namespace Host {

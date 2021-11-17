@@ -25,7 +25,7 @@ export class Proxy {
 			if(ipv4)
 				resolve(ipv4)
 			else
-				reject(ipv4)
+				reject(`Invalid IPv4 '${ipv4}'`)
 		})
 	}
 }
@@ -104,9 +104,17 @@ export namespace Proxy {
 			this.port = port
 			this.clusters = new Map()
 
-			this.setupPromise = new Promise<void>(async r => {
+			this.setupPromise = new Promise<void>(async (resolve, reject) => {
+				let externalAddress: string
+				
+				try {
+					externalAddress = await Proxy.getExternalAddress()
+				} catch(err) {
+					reject(err)
+				}
+
 				//Create a lobby listening for requests to this device's external ip and specified proxy port
-				this.lobby = new Lobby(courier, this.host, `${await Proxy.getExternalAddress()}:${port}`)
+				this.lobby = new Lobby(courier, this.host, `${externalAddress}:${port}`)
 
 				this.host.events.on("connect", e => {
 					//Since each guest is a remote client proxy enabling multiple connections, register a connected guest as a cluster of connections
@@ -179,7 +187,7 @@ export namespace Proxy {
 				})
 
 				Supeer.console(this).log(`Started for local server '${this.lobby.code}'`)
-				r()
+				resolve()
 			})
 		}
 
@@ -188,7 +196,7 @@ export namespace Proxy {
 		}
 
 		public discard(): void {
-			Supeer.console(this).log(`Stopping at local server '${this.lobby.code}'...`)
+			Supeer.console(this).log(`Severing from local server '${this.lobby.code}'...`)
 
 			this.lobby.discard()
 			this.host.discard()
@@ -321,13 +329,15 @@ export namespace Proxy {
 			if(!this.#server)
 				return
 
-			Supeer.console(this).log(`Disconnecting port '${this.port}' from '${this.dest.address}:${this.dest.port}'`)
+			Supeer.console(this).log(`Severing port '${this.port}' from '${this.dest.address}:${this.dest.port}'`)
 
-			;[...this.connections.values()].forEach(c => c.discard())
-			this.connections.clear()
+			this.guest.discard()
 
 			this.#server.close()
 			this.#server = null
+
+			;[...this.connections.values()].forEach(c => c.discard())
+			this.connections.clear()
 		}
 
 		public toString(): string {

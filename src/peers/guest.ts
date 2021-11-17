@@ -76,6 +76,13 @@ export class Guest extends Peer implements Discardable {
 		this.channel = null
 		this.connection = null
 	}
+
+	public override toString(): string {
+		if(this.connection)
+			return "Guest"
+
+		return "*Guest"
+	}
 }
 
 export namespace Guest {

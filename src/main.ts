@@ -1,63 +1,71 @@
 import "source-map-support/register.js"
 import readline from "readline"
-import BridgeCommand from "./commands/bridgeCommand.js"
 import Commander from "./commands/core/commander.js"
 import CreateCommand from "./commands/createCommand.js"
 import ExitCommand from "./commands/exitCommand.js"
 import HelpCommand from "./commands/helpCommand.js"
 import PoolCommand from "./commands/poolCommand.js"
-import ProxyCommand from "./commands/proxyCommand.js"
-import RepeaterCommand from "./commands/repeaterCommand.js"
-import SignalServerCommand from "./commands/signalServerCommand.js"
 import Supeer from "./supeer.js"
+import ScriptCommand from "./commands/scriptCommand.js"
+import {RunCommand} from "./commands/runCommand.js"
+
+//Cleanup on program exit
+process.on("exit", () => Supeer.pool.removeAll())
 
 //Create available commands
 let commander = new Commander(
-	CreateCommand,
-	PoolCommand,
-	ProxyCommand,
-	BridgeCommand,
-	RepeaterCommand,
-	SignalServerCommand,
+	HelpCommand,
 	ExitCommand,
-	HelpCommand
+	ScriptCommand,
+	RunCommand,
+	CreateCommand,
+	PoolCommand
 )
-
-//Prepare terminal for input processing
-let terminal = readline.createInterface({
-	input: process.stdin,
-	output: process.stdout,
-	terminal: true
-})
 
 //Load all config files then initialize user interaction
 Supeer.Config.populate().then(async () => {
-	if(process.argv.length > 2) {
-		//If command line arguments are specified, run them immediately and don't show welcome message
-		for(let line of process.argv.slice(2).join(" ").split(";"))
-			await commander.execute(line.split(/\s+/g))
-	} else {
-		console.log("Super Peer!")
+	let settings = Supeer.Config.get("settings")
+
+	//Prepare terminal for input processing
+	let terminal = readline.createInterface({
+		input: process.stdin,
+		output: process.stdout,
+		terminal: true,
+		history: settings?.autorun ?? [] //Add autorun commands to history
+	})
+
+	//Print welcome message if no additional command line arguments are specified
+	if(process.argv.length <= 2) {
+		console.log(`Supeer v${Supeer.Config.version}`)
 		console.log("Type 'help' for a list of commands.")
 		console.log()
 	}
 
-	for(let command of Supeer.Config.get("settings")?.autorun) {
-		try {
-			console.log(command)
-			await commander.execute(command.split(/\s+/g))
-		} catch(err) {
-			console.error(err)
-			break
+	//Execute autorun commands first
+	if("autorun" in settings)
+		await commander.run({echo: true}, ...settings.autorun)
+
+	//Use additional command line arguments as keys for scripts to run
+	if(process.argv.length > 2) {
+		//Run each script specified script, ignoring invalid script keys
+		for(let line of process.argv.slice(2)) {
+			let commands = settings?.scripts?.[line]
+
+			if(!commands) {
+				console.error(`Unable to find script '${line}'`)
+				continue
+			}
+
+			await commander.run(...commands)
 		}
 	}
 
 	//Poll for commands
-	terminal.on("line", line => {
+	terminal.on("line", async line => {
 		if(!line)
 			return
 
 		console.log()
-		commander.execute(line.split(/\s+/g))
+		await commander.run(line)
 	})
 })

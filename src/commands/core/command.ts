@@ -1,12 +1,13 @@
+import type Commander from "./commander.js"
 import Parameter from "./parameter.js"
 import ParameterError from "./parameterError.js"
 
-export default abstract class Command {
+export abstract class Command {
 	public abstract readonly name: string
 	public abstract readonly description: string
 	private parameters: Parameter[] = []
 
-	public abstract execute(args: string[], options: Record<string, any>): Promise<void>
+	public abstract execute(args: string[], options: Command.Options): Promise<void>
 
 	public help(): string {
 		let pars = [this.name, ...this.parameters.map(p => `${p}`)]
@@ -50,3 +51,11 @@ export default abstract class Command {
 		return this.parameters[index] as T
 	}
 }
+
+export namespace Command {
+	export interface Options {
+		commander: Commander
+	}
+}
+
+export default Command

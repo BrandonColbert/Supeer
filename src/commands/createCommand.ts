@@ -1,11 +1,12 @@
+import Supeer from "../supeer.js"
+import Discardable from "../utils/discardable.js"
 import Command from "./core/command.js"
 import CommandParameter from "./core/commandParameter.js"
 import ObjectParameter from "./core/objectParameter.js"
-import Pool from "./core/pool.js"
 import CourierCommand from "./courierCommand.js"
 import PeerCommand from "./peerCommand.js"
 
-export default class CreateCommand extends Command {
+export class CreateCommand extends Command {
 	public readonly name: string = "create"
 
 	public constructor() {
@@ -27,14 +28,27 @@ export default class CreateCommand extends Command {
 		return "Create an object."
 	}
 
-	public async execute(args: string[], options: Record<string, any>): Promise<void> {
+	public async execute(args: string[], options: CreateCommand.Options): Promise<void> {
 		let name: string
 		let command: Command
 		[name, command] = this.take(args)
 
-		options["name"] = name
-		await command.execute(args, options)
+		if(/^\d+$/.test(name)) {
+			console.log(`Numeric names such as '${name}' are disallowed for creation`)
+			return
+		}
 
-		console.log(`Created: ${Pool.get(name)}`)
+		await command.execute(args, options)
+		Supeer.pool.add(name, options.created)
+
+		console.log(`Created\t${options.created}`)
 	}
 }
+
+export namespace CreateCommand {
+	export interface Options extends Command.Options {
+		created: Discardable
+	}
+}
+
+export default CreateCommand

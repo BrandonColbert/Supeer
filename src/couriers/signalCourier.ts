@@ -37,6 +37,8 @@ export default class SignalCourier extends Courier {
 	}
 
 	public override discard(): void {
+		Supeer.console(this).log("Disconnecting...")
+
 		this.socket?.destroy()
 		this.socket = null
 	}

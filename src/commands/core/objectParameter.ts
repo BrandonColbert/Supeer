@@ -1,6 +1,6 @@
+import Supeer from "../../supeer.js"
 import Parameter from "./parameter.js"
 import ParameterError from "./parameterError.js"
-import Pool from "./pool.js"
 
 type Constructor = Function & {prototype: any}
 
@@ -8,10 +8,10 @@ export default class ObjectParameter extends Parameter {
 	public readonly name: string
 	public readonly type: Constructor
 
-	public constructor({description = undefined, optional = undefined, name, type}: ObjectParameter.Descriptor) {
-		super({description: description, optional})
-		this.name = name
-		this.type = type
+	public constructor(descriptor: ObjectParameter.Descriptor) {
+		super(descriptor)
+		this.name = descriptor.name
+		this.type = descriptor.type
 	}
 
 	public take(arg: string): any {
@@ -23,13 +23,13 @@ export default class ObjectParameter extends Parameter {
 			case String:
 				return arg
 			default:
-				if(!Pool.has(arg))
-					throw new ParameterError(`${this.type.name} '${this.name}' does not exist`)
+				if(!Supeer.pool.has(arg))
+					throw new ParameterError(`Object '${arg}' could not be found in the pool`)
 
-				let value = Pool.get(arg)
+				let value = Supeer.pool.get(arg)
 
 				if(!(value instanceof this.type))
-					throw new ParameterError(`Expected ${this.type.name} for '${this.name}' but got ${value.constructor.name}`)
+					throw new ParameterError(`Expected a ${this.type.name} for parameter <${this.name}>, but '${arg}' was a ${value.constructor.name}`)
 
 				return value
 		}

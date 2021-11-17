@@ -6,6 +6,7 @@ import Guest from "../peers/guest.js"
 import Host from "../peers/host.js"
 import Lobby from "../signal/lobby.js"
 import ObjectParameter from "./core/objectParameter.js"
+import type RunCommand from "./runCommand.js"
 
 export default class RepeaterCommand extends Command {
 	public readonly name: string = "repeater"
@@ -22,7 +23,7 @@ export default class RepeaterCommand extends Command {
 		return "Allows an external application to use Peer communication through a local TCP server."
 	}
 
-	public async execute(args: string[], options: Record<string, any>): Promise<void> {
+	public async execute(args: string[], options: RunCommand.Options): Promise<void> {
 		let courier: Courier
 		let port: number
 		let peer: Peer
@@ -31,18 +32,20 @@ export default class RepeaterCommand extends Command {
 		let repeater = new Repeater(peer, port)
 		await repeater.ready()
 
+		options.started = repeater
+
 		if(peer instanceof Guest) {
 			let code: number
 			[code] = this.take(args)
 
 			await Lobby.join(courier, peer, code)
 
-			console.log(`Joined lobby ${code}`)
+			console.log(`Joined lobby '${code}'`)
 		} else if(peer instanceof Host) {
 			let lobby = new Lobby(courier, peer)
 			await lobby.ready()
 
-			console.log(`Created lobby ${lobby.code} for repeater`)
+			console.log(`Created lobby '${lobby.code}' for repeater`)
 		}
 	}
 }

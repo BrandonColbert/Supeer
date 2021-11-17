@@ -21,6 +21,10 @@ export abstract class Peer {
 	 * Disconnects from associated peers
 	 */
 	public abstract disconnect(): void
+
+	public toString(): string {
+		return "*Peer"
+	}
 }
 
 export namespace Peer {

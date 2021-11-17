@@ -2,9 +2,18 @@ import fs from "fs"
 import path from "path"
 import {Console} from "console"
 import {Transform, Writable} from "stream"
+import Pool from "./utils/pool.js"
+
+// @ts-ignore
+import packageDeclaration from "../package.json"
 
 export class Supeer {
 	private static loggers: WeakMap<object, Console> = new WeakMap()
+
+	/**
+	 * Stores objects and processes created via commands
+	 */
+	public static readonly pool: Pool = new Pool()
 
 	/**
 	 * @param target Object for messages to be logged under
@@ -77,6 +86,10 @@ export namespace Supeer {
 		public static readonly path: string = "config"
 		private static readonly info: Map<string, any> = new Map<string, any>()
 
+		public static get version(): string {
+			return packageDeclaration?.version ?? "?"
+		}
+
 		/**
 		 * Acquires the configuration information from each file the predefined config path
 		 */
@@ -142,14 +155,19 @@ export namespace Supeer {
 			/**
 			 * Proxy configuration
 			 */
-			proxy: {
-				ipv4: string
+			proxy?: {
+				ipv4?: string
 			}
 
 			/**
 			 * List of commands to run after starting
 			 */
-			autorun: string[]
+			autorun?: string[]
+
+			/**
+			 * Registry containing scripts consisting of multiple commands
+			 */
+			scripts?: {[key: string]: string[]}
 		}
 	}
 }

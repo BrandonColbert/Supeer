@@ -2,16 +2,16 @@ import Guest from "../peers/guest.js"
 import Host from "../peers/host.js"
 import Command from "./core/command.js"
 import CommandParameter from "./core/commandParameter.js"
-import Pool from "./core/pool.js"
+import type CreateCommand from "./createCommand.js"
 
-export default class PeerCommand extends Command {
+export class PeerCommand extends Command {
 	public readonly name: string = "peer"
 
 	public constructor() {
 		super()
 		this.add(new CommandParameter({
 			description: "Peer type",
-			commands: [HostCommand, GuestCommand]
+			commands: [PeerCommand.HostCommand, PeerCommand.GuestCommand]
 		}))
 	}
 
@@ -19,7 +19,7 @@ export default class PeerCommand extends Command {
 		return "Creates a peer."
 	}
 
-	public async execute(args: string[], options: Record<string, any>): Promise<void> {
+	public async execute(args: string[], options: CreateCommand.Options): Promise<void> {
 		let command: Command
 		[command] = this.take(args)
 
@@ -27,26 +27,31 @@ export default class PeerCommand extends Command {
 	}
 }
 
-class HostCommand extends Command {
-	public readonly name: string = "host"
-
-	public get description(): string {
-		return "Creates a host instance."
+export namespace PeerCommand {
+	export class HostCommand extends Command {
+		public readonly name: string = "host"
+	
+		public get description(): string {
+			return "Creates a host instance."
+		}
+	
+		public async execute(args: string[], options: CreateCommand.Options): Promise<void> {
+			options.created = new Host()
+		}
 	}
-
-	public async execute(args: string[], options: Record<string, any>): Promise<void> {
-		Pool.set(options["name"], new Host())
+	
+	export class GuestCommand extends Command {
+		public readonly name: string = "guest"
+	
+		public get description(): string { 
+			return "Creates a guest instance."
+		}
+	
+		public async execute(args: string[], options: CreateCommand.Options): Promise<void> {
+			options.created = new Guest()
+		}
 	}
 }
 
-class GuestCommand extends Command {
-	public readonly name: string = "guest"
 
-	public get description(): string { 
-		return "Creates a guest instance."
-	}
-
-	public async execute(args: string[], options: Record<string, any>): Promise<void> {
-		Pool.set(options["name"], new Guest())
-	}
-}
+export default PeerCommand

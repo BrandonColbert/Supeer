@@ -19,20 +19,18 @@ export default class HelpCommand extends Command {
 		return "Get help for a command."
 	}
 
-	public async execute(args: string[], options: Record<string, any>): Promise<void> {
+	public async execute(args: string[], options: Command.Options): Promise<void> {
 		let commandName: string
 		[commandName] = this.take(args)
 
-		let commander = options["commander"] as Commander
-
 		if(commandName) {
 			let command: Command
-			[command] = commander["take"]([commandName])
+			[command] = options.commander["take"]([commandName])
 
 			console.log(`${command.description}\n\nUsage: ${command.help()}`)
 		} else {
 			console.log(
-				[...commander]
+				[...options.commander]
 					.map(c => `${c.name}: ${c.description}`)
 					.join("\n")
 			)
