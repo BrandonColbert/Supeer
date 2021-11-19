@@ -2,12 +2,14 @@
  * Used to write a string in smaller chunks which are composed on the receiving end
  */
 export class Buffered {
+	public static defaultChunkSize: number = 64 * 4 * 4
+
 	/**
 	 * @param msg Message to write in separate chunks
 	 * @param senders Method used to send a single message
 	 * @param chunkSize Amount of bytes to separate each chunk into
 	 */
-	public static write(msg: string, senders: Buffered.Send | Buffered.Send[], chunkSize: number = 64 * 4 * 4): void {
+	public static write(msg: string, senders: Buffered.Send | Buffered.Send[], chunkSize: number = Buffered.defaultChunkSize): void {
 		//Ensure senders is an array
 		if(!Array.isArray(senders))
 			senders = [senders]
@@ -19,25 +21,25 @@ export class Buffered {
 		 * @param end Chunk end
 		 */
 		function send(buffer: Buffer, start: number, end?: number): void {
-			let data = JSON.stringify({
-				size: buffer.length,
-				offset: start,
-				data: [...buffer.slice(start, end ?? (start + chunkSize))]
-			})
+			let data = buffer.slice(start, end ?? (start + chunkSize)).toString()
 
 			for(let fn of senders as Buffered.Send[])
 				fn(data)
 		}
 
-		//Convert the message into a buffer and determine chunks required
-		let buffer = Buffer.from(msg)
+		//Convert the message to base64, store it in a buffer, and determine chunks required
+		let buffer = Buffer.from(Buffer.from(msg).toString("base64"))
 		let chunks = Math.ceil(buffer.length / chunkSize)
 
 		//Send each chunk sequentially
 		for(let i = 0; i < chunks - 1; i++)
 			send(buffer, i * chunkSize)
 
-		send(buffer, (chunks - 1) * chunkSize, msg.length)
+		send(buffer, (chunks - 1) * chunkSize, buffer.length)
+
+		//Send newline character to signal end of message
+		for(let send of senders as Buffered.Send[])
+			send("\n")
 	}
 }
 
@@ -53,15 +55,14 @@ export namespace Buffered {
 	 */
 	export class Reader {
 		private listener: Listener
-		private chunkAccumulator: string
-		private messageBuffer: Buffer
+		private buffer: Buffer
 
 		/**
 		 * @param sender Each composed message is passed to this callback
 		 */
 		public constructor(listener: Listener) {
 			this.listener = listener
-			this.chunkAccumulator = ""
+			this.buffer = Buffer.alloc(0)
 		}
 
 		/**
@@ -69,34 +70,26 @@ export namespace Buffered {
 		 * @param chunks Message chunk
 		 */
 		public read(chunks: string | Buffer): void {
-			this.chunkAccumulator += chunks.toString()
+			//Convert the chunks into a string that can be scanned for newlines
+			let data = chunks.toString()
+			let delimiterIndex: number
 
-			for(let chunk of [...this.chunkAccumulator.matchAll(/{.*?}/g)].map(group => group[0])) {
-				//Consume the chunk from the accumulator
-				this.chunkAccumulator = this.chunkAccumulator.substring(chunk.length)
+			//Search for newlines that signal the end of individual message
+			while((delimiterIndex = data.indexOf("\n")) != -1) {
+				//Separate the newline terminated portion from the rest
+				let [head, tail] = [data.slice(0, delimiterIndex), data.slice(delimiterIndex + 1)]
+				data = tail
 
-				//Convert to info describing the chunk
-				let info: {size: number, offset: number, data: number[]} = JSON.parse(chunk)
+				//Use the accumulated buffer and the terminated portion of the incoming data to construct a complete message
+				let msg = Buffer.from(this.buffer.toString() + head, "base64").toString()
 
-				//If the offset is zero, a new message is being sent
-				if(info.offset == 0)
-					this.messageBuffer = Buffer.alloc(info.size)
-
-				//Create a buffer for the chunk and copy it into the composite message buffer
-				let db = Buffer.from(info.data)
-				db.copy(this.messageBuffer, info.offset)
-
-				//Check if the chunk completed the message
-				if(info.offset + db.length != info.size)
-					return
-
-				//Send the composed message and release the buffer
-				this.listener(this.messageBuffer.toString())
-				this.messageBuffer = null
+				//Clear the buffer and send the message
+				this.buffer = Buffer.alloc(0)
+				this.listener(msg)
 			}
 
-			if(this.chunkAccumulator.length > 0 && this.chunkAccumulator[0] != "{")
-				throw new Error(`Invalid chunkstate '${this.chunkAccumulator[0]}'`)
+			//Add any remaining (non-terminated) data to the buffer
+			this.buffer = Buffer.concat([this.buffer, Buffer.from(data)])
 		}
 	}
 }

@@ -133,11 +133,7 @@ export namespace Supeer {
 		 * @param key Config filename
 		 * @returns Content of the JSON file as an object
 		 */
-		public static get<T extends {} = any>(key: string): T
-		public static get(key: "settings"): Config.Settings
-		public static get(key: "rtc"): RTCConfiguration
-
-		public static get(key: string): any {
+		public static get<T extends keyof Config.Files>(key: T): Config.Files[T] {
 			return this.info.get(key)
 		}
 
@@ -151,7 +147,21 @@ export namespace Supeer {
 	}
 
 	export namespace Config {
+		export interface Files {
+			settings: Config.Settings
+			rtc: RTCConfiguration
+		}
+
 		export interface Settings {
+			/**
+			 * Chunk size to use if possible when sending buffered data
+			 * 
+			 * Should be a multiple of 8
+			 * 
+			 * (Defaults to 1024)
+			 */
+			chunkSize?: number
+
 			/**
 			 * Proxy configuration
 			 */

@@ -8,6 +8,7 @@ import PoolCommand from "./commands/poolCommand.js"
 import Supeer from "./supeer.js"
 import ScriptCommand from "./commands/scriptCommand.js"
 import {RunCommand} from "./commands/runCommand.js"
+import Buffered from "./utils/buffered.js"
 
 //Cleanup on program exit
 process.on("exit", () => Supeer.pool.removeAll())
@@ -25,6 +26,17 @@ let commander = new Commander(
 //Load all config files then initialize user interaction
 Supeer.Config.populate().then(async () => {
 	let settings = Supeer.Config.get("settings")
+
+	//Apply settings
+	if(settings.chunkSize != null) {
+		if(settings.chunkSize <= 0 || !Number.isInteger(settings.chunkSize))
+			throw new Error("Chunk size must be positive, nonzero integer!")
+
+		if(settings.chunkSize % 8 != 0)
+			console.warn(`Chunk size should be a multiple of 8, but ${settings.chunkSize} is not...\n`)
+
+		Buffered.defaultChunkSize = settings.chunkSize
+	}
 
 	//Prepare terminal for input processing
 	let terminal = readline.createInterface({
