@@ -4,7 +4,7 @@ import CommandParameter from "./core/commandParameter.js"
 import ObjectParameter from "./core/objectParameter.js"
 
 export class PoolCommand extends Command {
-	public name: string = "pool"
+	public readonly name: string = "pool"
 
 	public constructor() {
 		super()

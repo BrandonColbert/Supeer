@@ -1,28 +1,23 @@
 import {v4 as uuid} from "uuid"
+import {Dispatcher} from "../../lib/cobrasu/core.js"
 import Eventual from "../utils/eventual.js"
 
-type Callback = (id: Id, data: any) => boolean
-type Id = string
-
 /**
- * Creates connections by sending and receiving broadcasted data through some medium
+ * Creates connections by sending and receiving broadcasted data through some medium.
  * 
- * Every courier has its own unique id when broadcasting
+ * Every courier has its own unique id when broadcasting.
  */
-export default abstract class Courier implements Eventual {
-	public readonly id: Id
-	protected callbacks: Set<Callback>
+export abstract class Courier implements Eventual {
+	public readonly events: Dispatcher<Courier.Events> = new Dispatcher(
+		"discard",
+		"ready",
+		"receive"
+	)
 
-	public constructor() {
-		this.id = uuid()
-		this.callbacks = new Set()
-	}
-
-	public async ready(): Promise<void> {}
-
-	public discard(): void {
-		this.callbacks.clear()
-	}
+	/**
+	 * Unique identifier of this courier on its respective medium.
+	 */
+	public readonly id: string = uuid()
 
 	/**
 	 * Broadcast data to all listeners
@@ -35,24 +30,10 @@ export default abstract class Courier implements Eventual {
 		}))
 	}
 
-	/**
-	 * Listen for broadcasted information
-	 * @param callback Listener function
-	 */
-	public listen(callback: Callback): Callback {
-		this.callbacks.add(callback)
-		return callback
-	}
+	public abstract ready(): Promise<void>
+	public abstract discard(): void
 
-	/**
-	 * Stop listening with callback
-	 * @param callback Callback to stop listening on
-	 */
-	public forget(callback: Callback): void {
-		this.callbacks.delete(callback)
-	}
-
-	protected recieve(msg: string): void {
+	protected receive(msg: string): void {
 		let info: any = null
 
 		try {
@@ -64,10 +45,19 @@ export default abstract class Courier implements Eventual {
 		if(info.id == this.id)
 			return
 
-		for(let callback of this.callbacks)
-			if(!callback(info.id, info.data))
-				this.forget(callback)
+		this.events.fire("receive", {
+			id: info.id,
+			data: info.data
+		})
 	}
 
 	protected abstract send(msg: string): void
 }
+
+export namespace Courier {
+	export interface Events extends Eventual.Events {
+		receive: {id: string, data: any}
+	}
+}
+
+export default Courier

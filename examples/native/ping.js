@@ -14,13 +14,13 @@ using(
 	host.events.on("connect", () => console.log(`Guest joined`))
 	host.events.on("disconnect", () => console.log(`Guest left`))
 
-	let guestPingPromise = new Promise(r => guest.events.on("recieve", e => {
-		console.log(`Recieved "${e.message}" from host`)
+	let guestPingPromise = new Promise(r => guest.events.on("receive", e => {
+		console.log(`Received "${e.message}" from host`)
 		r()
 	}))
 
-	let hostPingPromise = new Promise(r => host.events.on("recieve", e => {
-		console.log(`Recieved "${e.message}" from guest`)
+	let hostPingPromise = new Promise(r => host.events.on("receive", e => {
+		console.log(`Received "${e.message}" from guest`)
 		host.send("pong", [e.id])
 		r()
 	}))

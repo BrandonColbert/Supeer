@@ -1,10 +1,9 @@
 //@ts-ignore
 import wrtc from "wrtc"
 
+import {Dispatcher} from "../../lib/cobrasu/core.js"
 import {v4 as uuid} from "uuid"
 import Peer from "./peer.js"
-import Dispatcher from "../utils/dispatcher.js"
-import Discardable from "../utils/discardable.js"
 import Supeer from "../supeer.js"
 import Buffered from "../utils/buffered.js"
 
@@ -13,11 +12,11 @@ type Line = {connection: RTCPeerConnection, channel: RTCDataChannel}
 /**
  * Maintains connections to multiple peers
  */
-export default class Host extends Peer implements Discardable {
+export class Host extends Peer {
 	public readonly events: Dispatcher<Host.Events> = new Dispatcher(
 		"connect",
 		"disconnect",
-		"recieve"
+		"receive"
 	)
 
 	private lines: Map<string, Line>
@@ -25,10 +24,6 @@ export default class Host extends Peer implements Discardable {
 	public constructor() {
 		super()
 		this.lines = new Map()
-	}
-
-	public discard(): void {
-		this.disconnect()
 	}
 
 	/** List of connected guest ids */
@@ -52,7 +47,7 @@ export default class Host extends Peer implements Discardable {
 	 * Connects to a guest
 	 * @param sdp Offer sdp created by a guest's join request
 	 * @param onCandidateOut Passes IceCandidates to be sent
-	 * @returns IceCandidate reciever and the answer sdp to the guest's join request
+	 * @returns IceCandidate receiver and the answer sdp to the guest's join request
 	 */
 	public async connect(sdp: string, onCandidateOut: Peer.CandidatePass): Promise<Host.ConnectResult> {
 		let id: string = uuid()
@@ -68,7 +63,7 @@ export default class Host extends Peer implements Discardable {
 		}
 
 		connection.ondatachannel = a => {
-			let reader = new Buffered.Reader(msg => this.events.fire("recieve", {id: id, message: msg}))
+			let reader = new Buffered.Reader(msg => this.events.fire("receive", {id: id, message: msg}))
 			a.channel.onmessage = b => reader.read(b.data)
 		}
 
@@ -122,7 +117,7 @@ export namespace Host {
 	export interface Events extends Peer.Events {
 		connect: {id: string}
 		disconnect: {id: string}
-		recieve: {id: string, message: string}
+		receive: {id: string, message: string}
 	}
 
 	export interface ConnectResult extends Peer.ConnectResult {
@@ -130,3 +125,5 @@ export namespace Host {
 		sdp: string
 	}
 }
+
+export default Host

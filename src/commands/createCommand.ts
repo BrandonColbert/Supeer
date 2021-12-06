@@ -4,7 +4,6 @@ import Command from "./core/command.js"
 import CommandParameter from "./core/commandParameter.js"
 import ObjectParameter from "./core/objectParameter.js"
 import CourierCommand from "./courierCommand.js"
-import PeerCommand from "./peerCommand.js"
 
 export class CreateCommand extends Command {
 	public readonly name: string = "create"
@@ -20,7 +19,7 @@ export class CreateCommand extends Command {
 
 		this.add(new CommandParameter({
 			description: "Type of object to create.",
-			commands: [CourierCommand, PeerCommand]
+			commands: [CourierCommand]
 		}))
 	}
 

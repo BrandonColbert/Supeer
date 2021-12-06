@@ -1,20 +1,19 @@
-//@ts-ignore
-import wrtc from "wrtc"
-
+import {Dispatcher} from "../../lib/cobrasu/core.js"
 import Peer from "./peer.js"
-import Dispatcher from "../utils/dispatcher.js"
-import Discardable from "../utils/discardable.js"
 import Supeer from "../supeer.js"
 import Buffered from "../utils/buffered.js"
+
+//@ts-ignore
+import wrtc from "wrtc"
 
 /**
  * Maintains a connection to a single peer
  */
-export class Guest extends Peer implements Discardable {
+export class Guest extends Peer {
 	public readonly events: Dispatcher<Guest.Events> = new Dispatcher(
 		"connect",
 		"disconnect",
-		"recieve"
+		"receive"
 	)
 
 	private connection: RTCPeerConnection
@@ -26,7 +25,7 @@ export class Guest extends Peer implements Discardable {
 		//Prepare for recieving
 		this.connection = new wrtc.RTCPeerConnection(Supeer.Config.get("rtc"))
 		this.connection.ondatachannel = a => {
-			let reader = new Buffered.Reader(msg => this.events.fire("recieve", {message: msg}))
+			let reader = new Buffered.Reader(msg => this.events.fire("receive", {message: msg}))
 			a.channel.onmessage = b => reader.read(b.data)
 		}
 
@@ -34,10 +33,6 @@ export class Guest extends Peer implements Discardable {
 		this.channel = this.connection.createDataChannel("send")
 		this.channel.onclose = () => this.events.fire("disconnect")
 		this.channel.onopen = () => this.events.fire("connect")
-	}
-
-	public discard(): void {
-		this.disconnect()
 	}
 
 	public send(msg: string): void {
@@ -57,7 +52,7 @@ export class Guest extends Peer implements Discardable {
 	 * Connects to a peer
 	 * @param sdp Answer sdp
 	 * @param onCandidateOut Passes IceCandidates to be sent
-	 * @returns IceCandidate reciever
+	 * @returns IceCandidate receiver
 	 */
 	public async connect(sdp: string, onCandidateOut: Peer.CandidatePass): Promise<Peer.ConnectResult> {
 		this.connection.onicecandidate = e => onCandidateOut(e.candidate ?? {})
@@ -89,7 +84,7 @@ export namespace Guest {
 	export interface Events extends Peer.Events {
 		connect: void
 		disconnect: void
-		recieve: {message: string}
+		receive: {message: string}
 	}
 }
 

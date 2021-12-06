@@ -25,7 +25,7 @@ describe("Courier", () => {
 					if("hello".localeCompare(data) == 0)
 						done()
 					else
-						done("Recieved incorrect data")
+						done("Received incorrect data")
 
 					r()
 				})
@@ -53,7 +53,7 @@ describe("Courier", () => {
 					if("hello".localeCompare(data) == 0)
 						done()
 					else
-						done("Recieved incorrect data")
+						done("Received incorrect data")
 
 					r()
 				})
@@ -79,7 +79,7 @@ describe("Courier", () => {
 					if("hello".localeCompare(data) == 0)
 						done()
 					else
-						done("Recieved incorrect data")
+						done("Received incorrect data")
 
 					r()
 				})
@@ -125,8 +125,8 @@ describe("Lobby", () => {
 			)(async (guest, guestCourier, host, hostCourier) => {
 				guest.events.on("connect", () => guest.send("ping"))
 	
-				let guestPingPromise = promisify(guest.events, guest.events.on, "recieve")
-				let hostPingPromise = promisify(host.events, host.events.on, "recieve").then(() => {
+				let guestPingPromise = promisify(guest.events, guest.events.on, "receive")
+				let hostPingPromise = promisify(host.events, host.events.on, "receive").then(() => {
 					host.send("pong", [e.id])
 				})
 	

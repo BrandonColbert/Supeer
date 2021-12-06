@@ -1,12 +1,12 @@
 {
 	"name": "supeer",
-	"version": "0.1.5",
+	"version": "0.1.7",
 	"description": "Enables peer to peer communication in different contexts using WebRTC.",
 	"author": "Brandon Colbert",
 	"license": "MIT",
 	"main": "./js/main.js",
 	"scripts": {
-		"build": "tsc",
+		"build": "npm i && tsc",
 		"watch": "tsc -w",
 		"start": "node .",
 		"test": "node mocha --recursive --exit",

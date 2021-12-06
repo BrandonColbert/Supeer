@@ -52,7 +52,7 @@ export namespace ProxyCommand {
 		public async execute(args: string[], options: ServerProxyCommand.Options): Promise<void> {
 			let port: number
 			[port] = this.take(args)
-	
+
 			let proxy = new Proxy.Server(options.courier, port)
 			await proxy.ready()
 	

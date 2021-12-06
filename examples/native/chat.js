@@ -18,7 +18,7 @@ term.question("Host or guest? ", async answer => {
 			let host = new Host()
 			host.events.on("connect", () => console.log(`Guest joined`))
 			host.events.on("disconnect", () => console.log(`Guest left`))
-			host.events.on("recieve", e => console.log(`\nGuest: ${e.message}`))
+			host.events.on("receive", e => console.log(`\nGuest: ${e.message}`))
 
 			let lobby = new Lobby(new SignalCourier("localhost", port), host)
 			await lobby.ready()
@@ -38,7 +38,7 @@ term.question("Host or guest? ", async answer => {
 			let guest = new Guest()
 			guest.events.on("connect", () => console.log("Joined host"))
 			guest.events.on("disconnect", () => console.log("Left host"))
-			guest.events.on("recieve", e => console.log(`\nHost: ${e.message}`))
+			guest.events.on("receive", e => console.log(`\nHost: ${e.message}`))
 
 			let code = await new Promise(r => term.question("Lobby: ", answer => r(parseInt(answer))))
 			await Lobby.join(new SignalCourier("localhost", port), guest, code)

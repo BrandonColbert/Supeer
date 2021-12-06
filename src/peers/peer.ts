@@ -1,4 +1,4 @@
-import Dispatcher from "../utils/dispatcher.js"
+import {Dispatcher} from "../../lib/cobrasu/core.js"
 
 export abstract class Peer {
 	public abstract readonly events: Dispatcher<Peer.Events>
@@ -13,7 +13,7 @@ export abstract class Peer {
 	 * Connects to a peer
 	 * @param sdp Answer or offer sdp
 	 * @param onCandidateOut Passes IceCandidates to be sent
-	 * @returns IceCandidate reciever
+	 * @returns IceCandidate receiver
 	 */
 	public abstract connect(sdp: string, onCandidateOut: Peer.CandidatePass): Promise<Peer.ConnectResult>
 
@@ -33,12 +33,12 @@ export namespace Peer {
 	export interface Events {
 		connect: any
 		disconnect: any
-		recieve: any
+		receive: any
 	}
 
 	export interface ConnectResult {
 		/**
-		 * Recieves IceCandidates
+		 * Receives IceCandidates
 		 */
 		onCandidateIn: CandidatePass
 	}

@@ -44,7 +44,7 @@ public class Program {
 
 	public class Host : Peer {
 		public Action<string> onConnect, onDisconnect;
-		public Action<string, string> onRecieve;
+		public Action<string, string> onReceive;
 		
 		public Host(int port) : base(port) {}
 
@@ -54,7 +54,7 @@ public class Program {
 
 		public override void Check() {
 			while(!items.IsEmpty && items.TryDequeue(out var result)) {
-				onRecieve(null, result);
+				onReceive(null, result);
 			}
 		}
 
@@ -66,7 +66,7 @@ public class Program {
 
 	public static void Main(string[] args) {
 		var host = new Host(25560);
-		host.onRecieve = (id, message) => Console.WriteLine(message);
+		host.onReceive = (id, message) => Console.WriteLine(message);
 
 		host.Send("Hello");
 

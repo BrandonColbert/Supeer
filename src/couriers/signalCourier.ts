@@ -1,4 +1,5 @@
 import net from "net"
+import {promisify} from "../../lib/cobrasu/core.js"
 import Supeer from "../supeer.js"
 import Buffered from "../utils/buffered.js"
 import Courier from "./courier.js"
@@ -7,39 +8,46 @@ import Courier from "./courier.js"
  * Creates connections using a signaling server
  */
 export default class SignalCourier extends Courier {
+	private readonly port: number
+	private readonly hostname: string
 	private socket: net.Socket
-	private connectPromise: Promise<void>
-	private hostname: string
-	private port: number
+	private reader: Buffered.Reader
+	readonly #ready: Promise<void>
 
 	public constructor(hostname: string, port: number) {
 		super()
 		this.hostname = hostname
 		this.port = port
 		this.socket = new net.Socket()
+		this.reader = new Buffered.Reader(msg => this.receive(msg))
 
-		let reader = new Buffered.Reader(msg => this.recieve(msg))
-
-		this.socket.on("data", data => reader.read(data))
-		this.socket.on("end", () => this.discard())
-		this.socket.on("close", (hadError: boolean) => this.discard())
-		this.socket.on("error", (error: Error) => {
-			Supeer.console(this).error(error.message)
-			this.discard()
-		})
-
-		this.connectPromise = new Promise<void>(r => this.socket.connect(port, hostname, () => r()))
+		//Register event listeners
+		this.socket.on("data", this.#onSocketData)
+		this.socket.on("end", this.#onSocketEnd)
+		this.socket.on("close", this.#onSocketClose)
+		this.socket.on("error", this.#onSocketError)
+	
+		this.#ready = this.setup()
 	}
 
-	public override async ready(): Promise<void> {
-		await super.ready()
-		await this.connectPromise
+	public async ready(): Promise<void> {
+		await this.#ready
 	}
 
 	public override discard(): void {
-		Supeer.console(this).log("Disconnecting...")
+		//Remove event listeners
+		this.socket.removeListener("data", this.#onSocketData)
+		this.socket.removeListener("end", this.#onSocketEnd)
+		this.socket.removeListener("close", this.#onSocketClose)
+		this.socket.removeListener("error", this.#onSocketError)
 
-		this.socket?.destroy()
+		Supeer.console(this).log("Stopping...")
+
+		//Notify discard
+		this.events.fire("discard")
+
+		//Destroy the socket
+		this.socket.destroy()
 		this.socket = null
 	}
 
@@ -52,5 +60,22 @@ export default class SignalCourier extends Courier {
 
 	protected send(msg: string): void {
 		Buffered.write(msg, chunk => this.socket.write(chunk))
+	}
+
+	protected async setup(): Promise<void> {
+		await promisify<[number, string, () => void]>(this.socket, this.socket.connect, this.port, this.hostname)
+
+		Supeer.console(this).log("Ready!")
+
+		//Notify ready
+		this.events.fire("ready")
+	}
+
+	#onSocketData = (data: Buffer) => this.reader.read(data)
+	#onSocketEnd = () => this.discard()
+	#onSocketClose = (hadError: boolean) => this.discard()
+	#onSocketError = (error: Error) => {
+		Supeer.console(this).error(error.message)
+		this.discard()
 	}
 }

@@ -1,22 +1,25 @@
 import net from "net"
+import {Dispatcher, promisify} from "../../lib/cobrasu/core.js"
+import Supeer from "../supeer.js"
+import Eventual from "../utils/eventual.js"
 import Peer from "../peers/peer.js"
 import Guest from "../peers/guest.js"
 import Host from "../peers/host.js"
-import Eventual from "../utils/eventual.js"
-import Supeer from "../supeer.js"
-import promisify from "../utils/promisify.js"
 import Buffered from "../utils/buffered.js"
+import Discardable from "../utils/discardable.js"
 
 /**
  * Allows an external application to use P2P communication through a local TCP server
  * 
  * Messages written to this server will be repeated by the bound peer to its host/guests
  */
-export default class Repeater implements Eventual {
-	private sockets: Set<net.Socket> = new Set<net.Socket>()
+export class Repeater implements Eventual {
+	public readonly events: Dispatcher<Eventual.Events> = new Dispatcher("discard", "ready")
+	public readonly port: number
+	private connections: Set<Repeater.Connection> = new Set()
 	private server: net.Server
 	private peer: Peer
-	private connectionReady: Promise<void>
+	readonly #ready: Promise<void>
 
 	/**
 	 * The port to start the local server on
@@ -25,103 +28,73 @@ export default class Repeater implements Eventual {
 	 */
 	public constructor(peer: Peer, port: number) {
 		this.peer = peer
+		this.port = port
+
+		//Create the server used to repeat peer events
 		this.server = net.createServer()
+		this.server.on("close", this.#onServerClose)
+		this.server.on("connection", this.#onServerConnection)
 
-		this.server.on("close", () => this.discard())
-		this.server.on("connection", socket => {
-			let discard = () => {
-				if(this.sockets.delete(socket))
-					socket.destroy()
-			}
-
-			let reader = new Buffered.Reader(line => {
-				try {
-					let info = JSON.parse(line)
-					this.send(info)
-				} catch(err) {
-					console.error(err)
-					Supeer.console(this).error(`Received invalid JSON from '${socket.address()}'\n${line}`)
-
-					socket.destroy()
-				}
-			})
-
-			socket.on("data", data => reader.read(data))
-			socket.on("close", () => discard())
-			socket.on("end", () => discard())
-			socket.on("close", (hadError: boolean) => discard())
-			socket.on("error", (error: Error) => {
-				Supeer.console(this).error(error.message)
-				discard()
-			})
-
-			this.sockets.add(socket)
-		})
-
-		if(peer instanceof Guest) {
-			peer.events.on("recieve", e => this.recieve({type: "recieve", message: e.message}))
-
-			peer.events.on("connect", () => {
-				this.recieve({type: "connect"})
-				Supeer.console(this).log(`Peer connected`)
-			})
-
-			peer.events.on("disconnect", () => {
-				this.recieve({type: "disconnect"})
-				Supeer.console(this).log(`Peer disconnected`)
-			})
-		} else if(peer instanceof Host) {
-			peer.events.on("recieve", e => this.recieve({type: "recieve", id: e.id, message: e.message}))
-
-			peer.events.on("connect", e => {
-				this.recieve({type: "connect", id: e.id})
-				Supeer.console(this).log(`Connected peer '${e.id}'`)
-			})
-
-			peer.events.on("disconnect", e => {
-				this.recieve({type: "disconnect", id: e.id})
-				Supeer.console(this).log(`Disconnected peer '${e.id}'`)
-			})
-		}
-
-		this.connectionReady = promisify<[number, string, () => void]>(this.server, this.server.listen, port, "localhost").then(() => {
-			Supeer.console(this).log("Started!")
-		})
+		//Ensure the local server is active
+		this.#ready = this.setup()
 	}
 
 	public async ready(): Promise<void> {
-		await this.connectionReady
+		await this.#ready
 	}
 
 	public discard(): void {
-		if(!this.server)
-			return
-
 		Supeer.console(this).log("Stopping...")
 
-		for(let socket of this.sockets)
-			socket.end()
+		//Remove peer events
+		if(this.peer instanceof Guest) {
+			this.peer.events.forget("receive", this.#onGuestReceive)
+			this.peer.events.forget("connect", this.#onGuestConnect)
+			this.peer.events.forget("disconnect", this.#onGuestDisconect)
+		} else if(this.peer instanceof Host) {
+			this.peer.events.forget("receive", this.#onHostReceive)
+			this.peer.events.forget("connect", this.#onHostConnect)
+			this.peer.events.forget("disconnect", this.#onHostDisconect)
+		}
 
-		this.sockets.clear()
+		//Disconnect all connections
+		for(let connection of [...this.connections])
+			connection.discard()
 
+		//Notify discard
+		this.events.fire("discard")
+
+		//Stop the server
 		this.server.close()
 		this.server = null
 	}
 
 	public toString(): string {
-		if(this.server) {
-			let address = this.server.address()
+		if(!this.server)
+			return "*Repeater"
 
-			switch(typeof address) {
-				case "string":
-					return `Repeater[address=${address}]`
-				default:
-					let {port} = address
-					return `Repeater[port=${port}]`
-			}
+		return `Repeater[port=${this.port}]`
+	}
+
+	private async setup(): Promise<void> {
+		//Wait for the local server to turn on
+		await promisify<[number, string, () => void]>(this.server, this.server.listen, this.port, "localhost")
+
+		//Listen to peer events to repeat them on the local server
+		if(this.peer instanceof Guest) {
+			this.peer.events.on("receive", this.#onGuestReceive)
+			this.peer.events.on("connect", this.#onGuestConnect)
+			this.peer.events.on("disconnect", this.#onGuestDisconect)
+		} else if(this.peer instanceof Host) {
+			this.peer.events.on("receive", this.#onHostReceive)
+			this.peer.events.on("connect", this.#onHostConnect)
+			this.peer.events.on("disconnect", this.#onHostDisconect)
 		}
 
-		return "Repeater"
+		Supeer.console(this).log("Started!")
+
+		//Notify ready
+		this.events.fire("ready")
 	}
 
 	private send(info: {message: string, ids?: string[]}): void {
@@ -131,8 +104,108 @@ export default class Repeater implements Eventual {
 			this.peer.send(info.message)
 	}
 
-	private recieve(info: {type: string, id?: string, message?: string}): void {
-		for(let socket of this.sockets)
-			socket.write(`${JSON.stringify(info)}\n`)
+	private receive(info: {type: string, id?: string, message?: string}): void {
+		for(let connection of this.connections)
+			connection.socket.write(`${JSON.stringify(info)}\n`)
+	}
+
+	#onServerClose = (): void => this.discard()
+	#onServerConnection = (socket: net.Socket) => {
+		let connection = new Repeater.Connection(this, socket)
+
+		connection.events.once("discard", () => {
+			Supeer.console(this).log(`Disconnecting client '${connection}'`)
+			this.connections.delete(connection)
+		})
+
+		this.connections.add(connection)
+		Supeer.console(this).log(`Client '${connection}' connected`)
+	}
+
+	#onGuestDiscard = (e: Discardable.Events["discard"]): void => this.discard()
+	#onGuestReceive = (e: Guest.Events["receive"]): void => this.receive({type: "receive", message: e.message})
+
+	#onGuestConnect = (e: Guest.Events["connect"]): void => {
+		this.receive({type: "connect"})
+		Supeer.console(this).log("Peer connected")
+	}
+
+	#onGuestDisconect = (e: Guest.Events["disconnect"]): void => {
+		this.receive({type: "disconnect"})
+		Supeer.console(this).log("Peer disconnected")
+	}
+
+	#onHostReceive = (e: Host.Events["receive"]): void => this.receive({type: "receive", id: e.id, message: e.message})
+
+	#onHostConnect = (e: Host.Events["connect"]): void => {
+		this.receive({type: "connect", id: e.id})
+		Supeer.console(this).log(`Connected peer '${e.id}'`)
+	}
+
+	#onHostDisconect = (e: Host.Events["disconnect"]): void => {
+		this.receive({type: "disconnect", id: e.id})
+		Supeer.console(this).log(`Disconnected peer '${e.id}'`)
 	}
 }
+
+export namespace Repeater {
+	export class Connection implements Discardable {
+		public readonly events: Dispatcher<Discardable.Events> = new Dispatcher("discard")
+		private reader: Buffered.Reader
+		#socket: net.Socket
+
+		public constructor(repeater: Repeater, socket: net.Socket) {
+			this.#socket = socket
+			this.reader = new Buffered.Reader(line => {
+				let info: {message: string, ids?: string[]}
+
+				try {
+					info = JSON.parse(line)
+				} catch(e) {
+					console.error(`Received invalid JSON from '${this}'`)
+					console.error(e)
+
+					this.discard()
+					return
+				}
+
+				repeater["send"](info)
+			})
+
+			socket.on("data", this.#onSocketData)
+			socket.on("end", this.#onSocketEnd)
+			socket.on("close", this.#onSocketClose)
+			socket.on("error", this.#onSocketError)
+		}
+
+		public get socket(): net.Socket {
+			return this.#socket
+		}
+
+		public discard(): void {
+			this.#socket.on("data", this.#onSocketData)
+			this.#socket.on("end", this.#onSocketEnd)
+			this.#socket.on("close", this.#onSocketClose)
+			this.#socket.on("error", this.#onSocketError)
+
+			this.events.fire("discard")
+
+			this.#socket.destroy()
+			this.#socket = null
+		}
+
+		public toString(): string {
+			return `${this.socket.address()}`
+		}
+
+		#onSocketData = (data: Buffer): void => this.reader.read(data)
+		#onSocketEnd = (): void => this.discard()
+		#onSocketClose = (hadError: boolean): void => this.discard()
+		#onSocketError = (error: Error): void => {
+			console.error(error.message)
+			this.discard()
+		}
+	}
+}
+
+export default Repeater

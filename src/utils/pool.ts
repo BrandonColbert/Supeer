@@ -30,6 +30,7 @@ export class Pool {
 			if(this.objects.has(name))
 				return
 
+			value.events.once("discard", () => this.remove(name, false))
 			this.objects.set(name, value)
 		} else {
 			let id: number
@@ -45,6 +46,7 @@ export class Pool {
 				this.unusedIds.delete(id)
 			}
 
+			value.events.once("discard", () => this.remove(id, false))
 			this.processes.set(id, value)
 		}
 	}
@@ -75,9 +77,9 @@ export class Pool {
 		}
 	}
 
-	public remove(pid: number): boolean
-	public remove(name: string): boolean
-	public remove(par1: number | string): boolean {
+	public remove(pid: number, discard?: boolean): boolean
+	public remove(name: string, discard?: boolean): boolean
+	public remove(par1: number | string, discard: boolean = true): boolean {
 		let value: Pool.Entry
 
 		switch(typeof par1) {
@@ -100,7 +102,8 @@ export class Pool {
 				break
 		}
 
-		value?.discard()
+		if(discard)
+			value?.discard()
 
 		return value != null
 	}

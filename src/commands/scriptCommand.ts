@@ -24,7 +24,7 @@ export default class ScriptCommand extends Command {
 		[name] = this.take(args)
 
 		let settings = Supeer.Config.get("settings")
-		let commands = settings?.scripts?.[name]
+		let commands = settings.scripts?.[name]
 
 		if(!commands) {
 			console.error(`Unable to find script '${name}'`)

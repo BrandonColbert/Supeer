@@ -2,7 +2,7 @@
  * Used to write a string in smaller chunks which are composed on the receiving end
  */
 export class Buffered {
-	public static defaultChunkSize: number = 64 * 4 * 4
+	public static defaultChunkSize: number
 
 	/**
 	 * @param msg Message to write in separate chunks
@@ -62,7 +62,7 @@ export namespace Buffered {
 		 */
 		public constructor(listener: Listener) {
 			this.listener = listener
-			this.buffer = Buffer.alloc(0)
+			this.buffer = Buffer.alloc(Buffered.defaultChunkSize)
 		}
 
 		/**
@@ -83,13 +83,22 @@ export namespace Buffered {
 				//Use the accumulated buffer and the terminated portion of the incoming data to construct a complete message
 				let msg = Buffer.from(this.buffer.toString() + head, "base64").toString()
 
-				//Clear the buffer and send the message
-				this.buffer = Buffer.alloc(0)
+				//Clear the buffer since a full message was constructed 
+				if(this.buffer.byteLength > 0)
+					this.buffer = Buffer.alloc(Buffered.defaultChunkSize)
+
+				//Send the message
 				this.listener(msg)
 			}
 
 			//Add any remaining (non-terminated) data to the buffer
-			this.buffer = Buffer.concat([this.buffer, Buffer.from(data)])
+			let remaining = Buffer.from(data)
+
+			//Copy if enough space is in the buffer, otherwise concatenate them
+			if((this.buffer.length - this.buffer.byteLength) >= remaining.byteLength)
+				remaining.copy(this.buffer, this.buffer.byteLength)
+			else
+				this.buffer = Buffer.concat([this.buffer, remaining])
 		}
 	}
 }

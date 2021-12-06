@@ -1,41 +1,54 @@
 import net from "net"
+import {Dispatcher, promisify} from "../../lib/cobrasu/core.js"
 import Supeer from "../supeer.js"
 import Buffered from "../utils/buffered.js"
 import Discardable from "../utils/discardable.js"
 import Eventual from "../utils/eventual.js"
-import promisify from "../utils/promisify.js"
 
 /**
  * A signaling server that can be used by a SignalCourier
  */
 export class SignalServer implements Eventual {
-	private server: net.Server
+	public readonly events: Dispatcher<Eventual.Events> = new Dispatcher("discard", "ready")
+	public readonly port: number
 	private connections: Set<SignalServer.Connection> = new Set()
-	private listenPromise: Promise<void>
+	private server: net.Server
+	readonly #ready: Promise<void>
 
+	/**
+	 * @param port Port to host the signaling server on
+	 */
 	public constructor(port: number) {
-		this.server = net.createServer()
-		this.server.on("close", () => this.discard())
-		this.server.on("connection", socket => new SignalServer.Connection(this, socket))
+		this.port = port
 
-		this.listenPromise = promisify<[number, string, () => void]>(this.server, this.server.listen, port, "").then(() => {
-			Supeer.console(this).log("Started!")
-		})
+		//Create the server
+		this.server = net.createServer()
+		this.server.on("close", this.#onServerClose)
+		this.server.on("connection", this.#onServerConnection)
+
+		//Ensure the server is listening
+		this.#ready = this.setup()
 	}
 
 	public async ready(): Promise<void> {
-		await this.listenPromise
+		await this.#ready
 	}
 
 	public discard(): void {
-		if(!this.server)
-			return
-
 		Supeer.console(this).log("Stopping...")
 
-		for(let connection of [...this.connections.values()])
+		//Delete event handlers
+		this.server.removeListener("close", this.#onServerClose)
+		this.server.removeListener("connection", this.#onServerConnection)
+
+		//Close connections
+		for(let connection of [...this.connections])
 			connection.discard()
 
+		//Notify discard
+		this.events.fire("discard")
+
+		//Close the server itself
 		this.server.close()
 		this.server = null
 	}
@@ -44,70 +57,111 @@ export class SignalServer implements Eventual {
 		if(!this.server)
 			return "*SignalServer"
 
-		let address = this.server.address()
+		return `SignalServer[port=${this.port}]`
+	}
 
-		switch(typeof address) {
-			case "string":
-				return `SignalServer[addr=${address}]`
-			default:
-				let {port} = address
-				return `SignalServer[port=${port}]`
-		}
+	private async setup(): Promise<void> {
+		await promisify<[number, string, () => void]>(
+			this.server,
+			this.server.listen,
+			this.port,
+			""
+		)
+
+		Supeer.console(this).log("Started!")
+
+		//Notify ready
+		this.events.fire("ready")
+	}
+
+	#onServerClose = (): void => this.discard()
+	#onServerConnection = (socket: net.Socket) => {
+		let connection = new SignalServer.Connection(this, socket)
+
+		connection.events.once("discard", () => {
+			Supeer.console(this).log(`Disconnecting '${connection}'`)
+			this.connections.delete(connection)
+		})
+
+		this.connections.add(connection)
+		Supeer.console(this).log(`Connected '${connection}'`)
 	}
 }
 
 export namespace SignalServer {
+	/**
+	 * Represents a client connected to the signal server
+	 */
 	export class Connection implements Discardable {
-		public readonly socket: net.Socket
+		public readonly events: Dispatcher<Discardable.Events>
 		private server: SignalServer
+		private reader: Buffered.Reader
+		#socket: net.Socket
 
+		/**
+		 * @param server Signal server instance
+		 * @param socket Socket for the client
+		 */
 		public constructor(server: SignalServer, socket: net.Socket) {
+			this.events = new Dispatcher("discard")
 			this.server = server
-
-			let reader = new Buffered.Reader(input => {
+			this.#socket = socket
+			this.reader = new Buffered.Reader(input => {
+				//Ensure that data to broadcast is sent in JSON format
 				try {
 					JSON.parse(input)
-				} catch(err) {
-					Supeer.console(this.server).error(`Received invalid JSON from ${this}\n${input}`)
+				} catch(e) {
+					//If not, disconnect the socket
+					console.error(`Received invalid JSON from '${this}'`)
+					console.error(e)
 					this.discard()
 	
 					return
 				}
 	
-				let connections = this.server["connections"]
-				Buffered.write(input, [...connections.values()].map(c => chunk => c.socket.write(chunk)))
+				//Send all clients the broadcasted message
+				Buffered.write(input, [...this.server["connections"]].map(c => chunk => c.socket.write(chunk)))
 			})
 
-			this.socket = socket
-			this.socket.on("data", data => reader.read(data))
-			this.socket.on("end", () => this.discard())
-			this.socket.on("close", (hadError: boolean) => this.discard())
-			this.socket.on("error", (error: Error) => {
-				Supeer.console(this.server).error(error.message)
-				this.discard()
-			})
+			//Register event listeners
+			this.socket.on("data", this.#onSocketData)
+			this.socket.on("end", this.#onSocketEnd)
+			this.socket.on("close", this.#onSocketClose)
+			this.socket.on("error", this.#onSocketError)
+		}
 
-			let connections: Set<Connection> = server["connections"]
-			connections.add(this)
-
-			Supeer.console(this.server).log(`Connected ${this}`)
+		public get socket(): net.Socket {
+			return this.#socket
 		}
 
 		public discard(): void {
-			let connections = this.server["connections"]
+			//Remove event listeners
+			this.socket.removeListener("data", this.#onSocketData)
+			this.socket.removeListener("end", this.#onSocketEnd)
+			this.socket.removeListener("close", this.#onSocketClose)
+			this.socket.removeListener("error", this.#onSocketError)
 
-			if(connections.delete(this)) {
-				this.socket.destroy()
+			//Notify discard
+			this.events.fire("discard")
 
-				Supeer.console(this.server).log(`Disconnected ${this}`)
-			}
+			//Close the socket
+			this.socket.destroy()
+			this.#socket = null
 		}
 
 		public toString(): string {
 			let address = this.socket.remoteAddress
 			let port = this.socket.remotePort
 
-			return address && port ? `${address}:${port}` : "'unknown'"
+			return (address && port) ? `${address}:${port}` : "unknown"
+		}
+
+		#onSocketData = (data: Buffer) => this.reader.read(data)
+		#onSocketEnd = () => this.discard()
+		#onSocketClose = (hadError: boolean) => this.discard()
+		#onSocketError = (error: Error) => {
+			console.error(error.message)
+			this.discard()
 		}
 	}
 }

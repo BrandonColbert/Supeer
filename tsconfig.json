@@ -7,13 +7,16 @@
 		"outDir": "js",
 		"baseUrl": ".",
 		"paths": {
-			"*": ["node_modules/*"]
+			"*": ["node_modules/*"],
+			// "/js/*": ["./src/*"],
+			// "/lib/*": ["./lib/*"]
 		},
 		"removeComments": false,
 		"inlineSourceMap": true,
 		"esModuleInterop": true,
 		"experimentalDecorators": true,
 		"emitDecoratorMetadata": true,
+		"useDefineForClassFields": true,
 		"resolveJsonModule": true,
 		"allowSyntheticDefaultImports": true,
 		"importsNotUsedAsValues": "preserve",
