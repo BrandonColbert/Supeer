@@ -42,13 +42,13 @@ export namespace PoolCommand {
 			let keys = [...Supeer.pool]
 	
 			if(keys.length == 0) {
-				console.log("Pool is empty.")
+				Supeer.console().log("Pool is empty.")
 				return
 			}
 
 			for(let key of keys) {
 				let value = Supeer.pool.get(key as any)
-				console.log(key, `\t${value}`)
+				Supeer.console().log(key, `\t${value}`)
 			}
 		}
 	}
@@ -78,16 +78,16 @@ export namespace PoolCommand {
 				let pid = parseInt(identifier)
 
 				if(Supeer.pool.remove(pid))
-					console.log(`Removed process ${pid}`)
+					Supeer.console().log(`Removed process ${pid}`)
 				else
-					console.log(`Process ${pid} does not exist`)
+					Supeer.console().log(`Process ${pid} does not exist`)
 			} else {
 				let name = identifier
 
 				if(Supeer.pool.remove(name))
-					console.log(`Removed '${name}'`)
+					Supeer.console().log(`Removed '${name}'`)
 				else
-					console.log(`'${name}' does not exist`)
+					Supeer.console().log(`'${name}' does not exist`)
 			}
 		}
 	}

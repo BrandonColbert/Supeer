@@ -1,7 +1,7 @@
 //@ts-ignore
 import wrtc from "wrtc"
 
-import {Dispatcher} from "../../lib/cobrasu/core.js"
+import CoBraSU from "../../lib/cobrasu-0.1.0.js"
 import {v4 as uuid} from "uuid"
 import Peer from "./peer.js"
 import Supeer from "../supeer.js"
@@ -13,7 +13,7 @@ type Line = {connection: RTCPeerConnection, channel: RTCDataChannel}
  * Maintains connections to multiple peers
  */
 export class Host extends Peer {
-	public readonly events: Dispatcher<Host.Events> = new Dispatcher(
+	public readonly events: CoBraSU.Core.Dispatcher<Host.Events> = new CoBraSU.Core.Dispatcher(
 		"connect",
 		"disconnect",
 		"receive"

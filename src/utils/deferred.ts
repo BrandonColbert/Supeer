@@ -1,10 +1,10 @@
-import {Dispatcher} from "../../lib/cobrasu/core.js"
+import CoBraSU from "../../lib/cobrasu-0.1.0.js"
 
 /**
  * When some setup process must be undergone asynchronously before use
  */
 export interface Deferred {
-	readonly events: Dispatcher<Deferred.Events>
+	readonly events: CoBraSU.Core.Dispatcher<Deferred.Events>
 
 	/**
 	 * Waits until setup has been completed

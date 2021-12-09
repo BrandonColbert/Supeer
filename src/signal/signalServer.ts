@@ -1,5 +1,5 @@
 import net from "net"
-import {Dispatcher, promisify} from "../../lib/cobrasu/core.js"
+import CoBraSU from "../../lib/cobrasu-0.1.0.js"
 import Supeer from "../supeer.js"
 import Buffered from "../utils/buffered.js"
 import Discardable from "../utils/discardable.js"
@@ -9,7 +9,7 @@ import Eventual from "../utils/eventual.js"
  * A signaling server that can be used by a SignalCourier
  */
 export class SignalServer implements Eventual {
-	public readonly events: Dispatcher<Eventual.Events> = new Dispatcher("discard", "ready")
+	public readonly events: CoBraSU.Core.Dispatcher<Eventual.Events> = new CoBraSU.Core.Dispatcher("discard", "ready")
 	public readonly port: number
 	private connections: Set<SignalServer.Connection> = new Set()
 	private server: net.Server
@@ -61,7 +61,7 @@ export class SignalServer implements Eventual {
 	}
 
 	private async setup(): Promise<void> {
-		await promisify<[number, string, () => void]>(
+		await CoBraSU.Core.promisify<[number, string, () => void]>(
 			this.server,
 			this.server.listen,
 			this.port,
@@ -93,7 +93,7 @@ export namespace SignalServer {
 	 * Represents a client connected to the signal server
 	 */
 	export class Connection implements Discardable {
-		public readonly events: Dispatcher<Discardable.Events>
+		public readonly events: CoBraSU.Core.Dispatcher<Discardable.Events>
 		private server: SignalServer
 		private reader: Buffered.Reader
 		#socket: net.Socket
@@ -103,7 +103,7 @@ export namespace SignalServer {
 		 * @param socket Socket for the client
 		 */
 		public constructor(server: SignalServer, socket: net.Socket) {
-			this.events = new Dispatcher("discard")
+			this.events = new CoBraSU.Core.Dispatcher("discard")
 			this.server = server
 			this.#socket = socket
 			this.reader = new Buffered.Reader(input => {
@@ -112,8 +112,8 @@ export namespace SignalServer {
 					JSON.parse(input)
 				} catch(e) {
 					//If not, disconnect the socket
-					console.error(`Received invalid JSON from '${this}'`)
-					console.error(e)
+					Supeer.console().error(`Received invalid JSON from '${this}'`)
+					Supeer.console().error(e)
 					this.discard()
 	
 					return
@@ -160,7 +160,7 @@ export namespace SignalServer {
 		#onSocketEnd = () => this.discard()
 		#onSocketClose = (hadError: boolean) => this.discard()
 		#onSocketError = (error: Error) => {
-			console.error(error.message)
+			Supeer.console().error(error.message)
 			this.discard()
 		}
 	}

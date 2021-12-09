@@ -1,5 +1,5 @@
 import {v4 as uuid} from "uuid"
-import {Dispatcher} from "../../lib/cobrasu/core.js"
+import CoBraSU from "../../lib/cobrasu-0.1.0.js"
 import Eventual from "../utils/eventual.js"
 
 /**
@@ -8,7 +8,7 @@ import Eventual from "../utils/eventual.js"
  * Every courier has its own unique id when broadcasting.
  */
 export abstract class Courier implements Eventual {
-	public readonly events: Dispatcher<Courier.Events> = new Dispatcher(
+	public readonly events: CoBraSU.Core.Dispatcher<Courier.Events> = new CoBraSU.Core.Dispatcher(
 		"discard",
 		"ready",
 		"receive"

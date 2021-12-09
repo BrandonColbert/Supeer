@@ -1,5 +1,5 @@
 import {v4 as uuid} from "uuid"
-import {Dispatcher} from "../../lib/cobrasu/core.js"
+import CoBraSU from "../../lib/cobrasu-0.1.0.js"
 import Guest from "../peers/guest.js"
 import Host from "../peers/host.js"
 import Courier from "../couriers/courier.js"
@@ -10,7 +10,7 @@ import Deferred from "../utils/deferred"
  * Enables hosts and guests to connect directly through some medium
  */
 export default class Lobby implements Deferred {
-	public readonly events: Dispatcher<Deferred.Events> = new Dispatcher("ready")
+	public readonly events: CoBraSU.Core.Dispatcher<Deferred.Events> = new CoBraSU.Core.Dispatcher("ready")
 
 	/** Code to the lobby */
 	public readonly code: string

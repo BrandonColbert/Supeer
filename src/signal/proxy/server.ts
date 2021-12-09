@@ -1,5 +1,5 @@
 import net from "net"
-import {Dispatcher} from "../../../lib/cobrasu/core.js"
+import CoBraSU from "../../../lib/cobrasu-0.1.0.js"
 import Courier from "../../couriers/courier.js"
 import Eventual from "../../utils/eventual.js"
 import Host from "../../peers/host.js"
@@ -12,7 +12,7 @@ import _Connection from "./server/connection.js"
  * Uses WebRTC to act as a proxy for local server connected to clusters of remote clients
  */
 export class Server implements Eventual {
-	public readonly events: Dispatcher<Eventual.Events> = new Dispatcher("ready", "discard")
+	public readonly events: CoBraSU.Core.Dispatcher<Eventual.Events> = new CoBraSU.Core.Dispatcher("ready", "discard")
 	public readonly port: number
 	private readonly clusters: Map<string, Map<string, Server.Connection>> = new Map()
 	private readonly courier: Courier
@@ -98,7 +98,7 @@ export class Server implements Eventual {
 		try {
 			info = JSON.parse(e.message)
 		} catch(err) {
-			console.error(err)
+			Supeer.console().error(err)
 			Supeer.console(this).error(`Received invalid JSON from cluster '${e.id}'\n${e.message}`)
 
 			this.host.disconnect(e.id)

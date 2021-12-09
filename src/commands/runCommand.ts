@@ -35,7 +35,7 @@ export class RunCommand extends Command {
 		await command.execute(args, options)
 		Supeer.pool.add(options.started)
 
-		console.log(`Started\t${options.started}`)
+		Supeer.console().log(`Started\t${options.started}`)
 	}
 }
 

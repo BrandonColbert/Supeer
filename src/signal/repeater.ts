@@ -1,5 +1,5 @@
 import net from "net"
-import {Dispatcher, promisify} from "../../lib/cobrasu/core.js"
+import CoBraSU from "../../lib/cobrasu-0.1.0.js"
 import Supeer from "../supeer.js"
 import Eventual from "../utils/eventual.js"
 import Peer from "../peers/peer.js"
@@ -14,7 +14,7 @@ import Discardable from "../utils/discardable.js"
  * Messages written to this server will be repeated by the bound peer to its host/guests
  */
 export class Repeater implements Eventual {
-	public readonly events: Dispatcher<Eventual.Events> = new Dispatcher("discard", "ready")
+	public readonly events: CoBraSU.Core.Dispatcher<Eventual.Events> = new CoBraSU.Core.Dispatcher("discard", "ready")
 	public readonly port: number
 	private connections: Set<Repeater.Connection> = new Set()
 	private server: net.Server
@@ -78,7 +78,7 @@ export class Repeater implements Eventual {
 
 	private async setup(): Promise<void> {
 		//Wait for the local server to turn on
-		await promisify<[number, string, () => void]>(this.server, this.server.listen, this.port, "localhost")
+		await CoBraSU.Core.promisify<[number, string, () => void]>(this.server, this.server.listen, this.port, "localhost")
 
 		//Listen to peer events to repeat them on the local server
 		if(this.peer instanceof Guest) {
@@ -150,7 +150,7 @@ export class Repeater implements Eventual {
 
 export namespace Repeater {
 	export class Connection implements Discardable {
-		public readonly events: Dispatcher<Discardable.Events> = new Dispatcher("discard")
+		public readonly events: CoBraSU.Core.Dispatcher<Discardable.Events> = new CoBraSU.Core.Dispatcher("discard")
 		private reader: Buffered.Reader
 		#socket: net.Socket
 
@@ -162,8 +162,8 @@ export namespace Repeater {
 				try {
 					info = JSON.parse(line)
 				} catch(e) {
-					console.error(`Received invalid JSON from '${this}'`)
-					console.error(e)
+					Supeer.console().error(`Received invalid JSON from '${this}'`)
+					Supeer.console().error(e)
 
 					this.discard()
 					return
@@ -202,7 +202,7 @@ export namespace Repeater {
 		#onSocketEnd = (): void => this.discard()
 		#onSocketClose = (hadError: boolean): void => this.discard()
 		#onSocketError = (error: Error): void => {
-			console.error(error.message)
+			Supeer.console().error(error.message)
 			this.discard()
 		}
 	}

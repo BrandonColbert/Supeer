@@ -11,6 +11,6 @@ export default class ReloadCommand extends Command {
 	public async execute(): Promise<void> {
 		await Supeer.Config.load()
 
-		console.log("Reloaded config!")
+		Supeer.console().log("Reloaded config!")
 	}
 }

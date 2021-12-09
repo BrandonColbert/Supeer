@@ -27,7 +27,7 @@ export default class ScriptCommand extends Command {
 		let commands = settings.scripts?.[name]
 
 		if(!commands) {
-			console.error(`Unable to find script '${name}'`)
+			Supeer.console().error(`Unable to find script '${name}'`)
 			return
 		}
 

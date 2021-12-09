@@ -1,6 +1,6 @@
 import http from "http"
 import websocket from "websocket"
-import {Dispatcher, promisify} from "../../lib/cobrasu/core.js"
+import CoBraSU from "../../lib/cobrasu-0.1.0.js"
 import Courier from "../couriers/courier.js"
 import Eventual from "../utils/eventual.js"
 import Supeer from "../supeer.js"
@@ -12,7 +12,7 @@ import Discardable from "../utils/discardable"
 export class Bridge implements Eventual {
 	private static localhostUrls: Set<string> = new Set(["localhost", "127.0.0.1", ""])
 
-	public readonly events: Dispatcher<Eventual.Events> = new Dispatcher("discard", "ready")
+	public readonly events: CoBraSU.Core.Dispatcher<Eventual.Events> = new CoBraSU.Core.Dispatcher("discard", "ready")
 	public readonly port: number
 	private readonly connections: Set<Bridge.Connection> = new Set()
 	private readonly courier: Courier
@@ -71,7 +71,7 @@ export class Bridge implements Eventual {
 
 	private async setup(): Promise<void> {
 		//Wait for server to activate
-		await promisify<[number, () => void]>(this.server, this.server.listen, this.port)
+		await CoBraSU.Core.promisify<[number, () => void]>(this.server, this.server.listen, this.port)
 
 		Supeer.console(this).log("Started!")
 
@@ -114,7 +114,7 @@ export class Bridge implements Eventual {
 
 export namespace Bridge {
 	export class Connection implements Discardable {
-		public readonly events: Dispatcher<Discardable.Events> = new Dispatcher("discard")
+		public readonly events: CoBraSU.Core.Dispatcher<Discardable.Events> = new CoBraSU.Core.Dispatcher("discard")
 		private readonly courier: Courier
 		#connection: websocket.connection
 
@@ -163,8 +163,8 @@ export namespace Bridge {
 			try {
 				info = JSON.parse(data)
 			} catch(e) {
-				console.error(`Received invalid JSON from '${this}'`)
-				console.error(e)
+				Supeer.console().error(`Received invalid JSON from '${this}'`)
+				Supeer.console().error(e)
 
 				this.discard()
 				return

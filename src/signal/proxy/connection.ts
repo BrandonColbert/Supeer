@@ -1,13 +1,14 @@
 import net from "net"
 import stream from "stream"
-import {Dispatcher} from "../../../lib/cobrasu/core.js"
+import CoBraSU from "../../../lib/cobrasu-0.1.0.js"
+import Supeer from "../../supeer.js"
 import Discardable from "../../utils/discardable.js"
 
 /**
  * Enables socket IO customization
  */
 export default abstract class Connection implements Discardable {
-	public abstract readonly events: Dispatcher<Discardable.Events>
+	public abstract readonly events: CoBraSU.Core.Dispatcher<Discardable.Events>
 	public readonly id: string
 	#socket: net.Socket
 
@@ -75,7 +76,7 @@ export default abstract class Connection implements Discardable {
 	#onSocketEnd = () => this.discard()
 	#onSocketClose = (hadError: boolean) => this.discard()
 	#onSocketError = (error: Error) => {
-		console.error(error)
+		Supeer.console().error(error)
 
 		this.discard()
 	}

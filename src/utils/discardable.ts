@@ -1,10 +1,10 @@
-import {Dispatcher} from "../../lib/cobrasu/core.js"
+import CoBraSU from "../../lib/cobrasu-0.1.0.js"
 
 /**
  * Manages some resource that may be freed
  */
 export interface Discardable {
-	readonly events: Dispatcher<Discardable.Events>
+	readonly events: CoBraSU.Core.Dispatcher<Discardable.Events>
 
 	/**
 	 * Release associated resources

@@ -1,10 +1,19 @@
+import CoBraSU from "../../lib/cobrasu-0.1.0.js"
 import Discardable from "./discardable.js"
 
 export class Pool {
+	public events: CoBraSU.Core.Dispatcher<Pool.Events> = new CoBraSU.Core.Dispatcher("add", "remove", "update")
 	private objects: Map<string, Pool.Entry> = new Map()
 	private processes: Map<number, Pool.Entry> = new Map()
 	private unusedIds: Set<number> = new Set()
 	private nextId: number = 0
+
+	/**
+	 * Number of items (object and processes) in this pool
+	 */
+	public get size(): number {
+		return this.objects.size + this.processes.size
+	}
 
 	public *[Symbol.iterator](): IterableIterator<string | number> {
 		for(let category of this.objects.keys())
@@ -32,6 +41,7 @@ export class Pool {
 
 			value.events.once("discard", () => this.remove(name, false))
 			this.objects.set(name, value)
+			this.events.fire("add", {key: name, value: value})
 		} else {
 			let id: number
 
@@ -48,7 +58,10 @@ export class Pool {
 
 			value.events.once("discard", () => this.remove(id, false))
 			this.processes.set(id, value)
+			this.events.fire("add", {key: id, value: value})
 		}
+
+		this.events.fire("update")
 	}
 
 	public get(pid: number): Pool.Entry
@@ -102,8 +115,13 @@ export class Pool {
 				break
 		}
 
-		if(discard)
-			value?.discard()
+		if(value) {
+			if(discard)
+				value.discard()
+
+			this.events.fire("remove", value)
+			this.events.fire("update")
+		}
 
 		return value != null
 	}
@@ -123,7 +141,14 @@ export class Pool {
 }
 
 export namespace Pool {
+	export type Key = string | number
 	export type Entry = Discardable
+
+	export interface Events {
+		add: {key: Pool.Key, value: Pool.Entry}
+		remove: Pool.Entry
+		update: void
+	}
 }
 
 export default Pool

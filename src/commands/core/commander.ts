@@ -1,3 +1,4 @@
+import Supeer from "../../supeer.js"
 import CommandParameter from "./commandParameter.js"
 import Command from "./command.js"
 import ParameterError from "./parameterError.js"
@@ -58,11 +59,11 @@ export class Commander extends Command {
 		for(let command of commands) {
 			try {
 				if(options.echo)
-					console.log(command)
+					Supeer.console().log(command)
 
 				await this.execute(command.split(/\s+/g))
 			} catch(err) {
-				console.error(err)
+				Supeer.console().error(err)
 
 				if(options.stopOnError)
 					break
@@ -76,13 +77,10 @@ export class Commander extends Command {
 			[command] = this.take(args)
 
 			await command.execute(args, {commander: this})
-
-			console.log()
 		} catch(e) {
-			if(e instanceof ParameterError) {
-				console.log(e.message)
-				console.log()
-			} else
+			if(e instanceof ParameterError)
+				Supeer.console().log(e.message)
+			else
 				throw e
 		}
 	}

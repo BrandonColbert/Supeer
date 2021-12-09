@@ -1,5 +1,5 @@
+import Supeer from "../supeer.js"
 import Command from "./core/command.js"
-import Commander from "./core/commander.js"
 import ObjectParameter from "./core/objectParameter.js"
 
 export default class HelpCommand extends Command {
@@ -27,9 +27,9 @@ export default class HelpCommand extends Command {
 			let command: Command
 			[command] = options.commander["take"]([commandName])
 
-			console.log(`${command.description}\n\nUsage: ${command.help()}`)
+			Supeer.console().log(`${command.description}\n\nUsage: ${command.help()}`)
 		} else {
-			console.log(
+			Supeer.console().log(
 				[...options.commander]
 					.map(c => `${c.name}: ${c.description}`)
 					.join("\n")

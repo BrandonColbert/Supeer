@@ -1,5 +1,5 @@
 import net from "net"
-import {Dispatcher, promisify} from "../../../lib/cobrasu/core.js"
+import CoBraSU from "../../../lib/cobrasu-0.1.0.js"
 import Supeer from "../../supeer.js"
 import Eventual from "../../utils/eventual.js"
 import Courier from "../../couriers/courier.js"
@@ -12,7 +12,7 @@ import Lobby from "../lobby.js"
  * Uses WebRTC to act as a proxy for local clients connected to a remote server
  */
 export class Client implements Eventual {
-	public readonly events: Dispatcher<Eventual.Events> = new Dispatcher("ready", "discard")
+	public readonly events: CoBraSU.Core.Dispatcher<Eventual.Events> = new CoBraSU.Core.Dispatcher("ready", "discard")
 	public readonly port: number
 	public readonly dest: Proxy.SocketAddress
 	private readonly connections: Map<string, Client.Connection> = new Map()
@@ -102,7 +102,7 @@ export class Client implements Eventual {
 		})
 
 		//Wait for the local server to activate
-		await promisify<[number, () => void]>(this.server, this.server.listen, this.port)
+		await CoBraSU.Core.promisify<[number, () => void]>(this.server, this.server.listen, this.port)
 
 		Supeer.console(this).log("Connected!")
 

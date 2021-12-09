@@ -59,9 +59,9 @@ export class Proxy {
 						Proxy.externalAddress = ip
 						return true
 					} else
-						console.log(`${api} failed to provide IPv4`, `'${ip}'`)
+						Supeer.console().log(`${api} failed to provide IPv4`, `'${ip}'`)
 				} catch(e) {
-					console.error(api, e)
+					Supeer.console().error(api, e)
 				}
 			}
 

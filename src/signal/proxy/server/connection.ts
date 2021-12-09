@@ -1,11 +1,11 @@
 import net from "net"
-import {Dispatcher, promisify} from "../../../../lib/cobrasu/core.js"
+import CoBraSU from "../../../../lib/cobrasu-0.1.0.js"
 import Eventual from "../../../utils/eventual.js"
 import Host from "../../../peers/host.js"
 import ProxyConnection from "../../proxy/connection.js"
 
 export class Connection extends ProxyConnection implements Eventual {
-	public readonly events: Dispatcher<Eventual.Events> = new Dispatcher("discard", "ready")
+	public readonly events: CoBraSU.Core.Dispatcher<Eventual.Events> = new CoBraSU.Core.Dispatcher("discard", "ready")
 	private readonly host: Host
 	private readonly guestId: string
 	readonly #ready: Promise<void>
@@ -39,7 +39,7 @@ export class Connection extends ProxyConnection implements Eventual {
 	}
 
 	private async setup(): Promise<void> {
-		await promisify<[string, () => void]>(this.socket, this.socket.once, "connect")
+		await CoBraSU.Core.promisify<[string, () => void]>(this.socket, this.socket.once, "connect")
 	}
 }
 

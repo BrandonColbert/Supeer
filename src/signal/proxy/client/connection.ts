@@ -1,12 +1,12 @@
 import net from "net"
 import {v4 as uuid} from "uuid"
-import {Dispatcher} from "../../../../lib/cobrasu/core.js"
+import CoBraSU from "../../../../lib/cobrasu-0.1.0.js"
 import Guest from "../../../peers/guest.js"
 import Discardable from "../../../utils/discardable.js"
 import ProxyConnection from "../../proxy/connection.js"
 
 export default class Connection extends ProxyConnection {
-	public readonly events: Dispatcher<Discardable.Events> = new Dispatcher("discard")
+	public readonly events: CoBraSU.Core.Dispatcher<Discardable.Events> = new CoBraSU.Core.Dispatcher("discard")
 	private readonly guest: Guest
 
 	public constructor(guest: Guest, socket: net.Socket) {

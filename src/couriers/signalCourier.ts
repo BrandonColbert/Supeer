@@ -1,5 +1,5 @@
 import net from "net"
-import {promisify} from "../../lib/cobrasu/core.js"
+import CoBraSU from "../../lib/cobrasu-0.1.0.js"
 import Supeer from "../supeer.js"
 import Buffered from "../utils/buffered.js"
 import Courier from "./courier.js"
@@ -63,7 +63,7 @@ export default class SignalCourier extends Courier {
 	}
 
 	protected async setup(): Promise<void> {
-		await promisify<[number, string, () => void]>(this.socket, this.socket.connect, this.port, this.hostname)
+		await CoBraSU.Core.promisify<[number, string, () => void]>(this.socket, this.socket.connect, this.port, this.hostname)
 
 		Supeer.console(this).log("Ready!")
 

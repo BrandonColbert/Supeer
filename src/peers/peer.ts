@@ -1,7 +1,7 @@
-import {Dispatcher} from "../../lib/cobrasu/core.js"
+import CoBraSU from "../../lib/cobrasu-0.1.0.js"
 
 export abstract class Peer {
-	public abstract readonly events: Dispatcher<Peer.Events>
+	public abstract readonly events: CoBraSU.Core.Dispatcher<Peer.Events>
 
 	/**
 	 * Sends a message to connected peers

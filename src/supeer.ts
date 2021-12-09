@@ -12,6 +12,11 @@ export class Supeer {
 	 */
 	public static readonly pool: Pool = new Pool()
 
+	/**
+	 * Default console to use when no target is specified
+	 */
+	public static defaultConsole: Console = console
+
 	private static loggers: WeakMap<object, Console> = new WeakMap()
 
 	/**
@@ -25,12 +30,20 @@ export class Supeer {
 	 * @param target Object for messages to be logged under
 	 * @returns A cached, object specific logger instance
 	 */
-	public static console<T extends object>(target: T): Console {
+	public static console<T extends object>(target?: T): Console {
+		if(!target)
+			return Supeer.defaultConsole
+
 		//Attempt to get object logger
 		let logger = this.loggers.get(target)
 
 		if(!logger) {
-			let getString = () => `\t${target}: `
+			let getString: () => string
+
+			if(Supeer.Stream.out == process.stdout)
+				getString = () => `\t${target}: `
+			else
+				getString = () => `${target}: `
 
 			//Create a logger which prepends the object's string value
 			logger = new Console(

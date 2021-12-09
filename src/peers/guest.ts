@@ -1,4 +1,4 @@
-import {Dispatcher} from "../../lib/cobrasu/core.js"
+import CoBraSU from "../../lib/cobrasu-0.1.0.js"
 import Peer from "./peer.js"
 import Supeer from "../supeer.js"
 import Buffered from "../utils/buffered.js"
@@ -10,7 +10,7 @@ import wrtc from "wrtc"
  * Maintains a connection to a single peer
  */
 export class Guest extends Peer {
-	public readonly events: Dispatcher<Guest.Events> = new Dispatcher(
+	public readonly events: CoBraSU.Core.Dispatcher<Guest.Events> = new CoBraSU.Core.Dispatcher(
 		"connect",
 		"disconnect",
 		"receive"

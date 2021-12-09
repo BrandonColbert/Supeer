@@ -33,14 +33,14 @@ export class CreateCommand extends Command {
 		[name, command] = this.take(args)
 
 		if(/^\d+$/.test(name)) {
-			console.log(`Numeric names such as '${name}' are disallowed for creation`)
+			Supeer.console().log(`Numeric names such as '${name}' are disallowed for creation`)
 			return
 		}
 
 		await command.execute(args, options)
 		Supeer.pool.add(name, options.created)
 
-		console.log(`Created\t${options.created}`)
+		Supeer.console().log(`Created\t${options.created}`)
 	}
 }
 
